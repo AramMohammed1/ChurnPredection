@@ -8,5 +8,4 @@ __pycache__/
 *.pyd
 .Python
 *.so 
-
-ecommerce_customer_data_large.csv
+*.csv
