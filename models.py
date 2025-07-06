@@ -73,17 +73,5 @@ def create_table_from_csv(csv_file_path, table_name, engine):
     
     return table
 
-def insert_csv_data_to_table(csv_file_path, table_name, engine):
-    """
-    Insert CSV data into the created table
-    """
-    # Read CSV file
-    df = pd.read_csv(csv_file_path)
-    
-    # Insert data into table
-    df.to_sql(table_name, engine, if_exists='replace', index=False)
-    
-    print(f"Data inserted into table '{table_name}' successfully!")
-
 # Example usage:
 # insert_csv_data_to_table('ecommerce_customer_data_large.csv', 'customer_data', engine)
