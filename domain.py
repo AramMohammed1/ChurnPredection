@@ -28,9 +28,25 @@ def insert_csv_data_to_table(csv_file_path, table_name, engine):
     Insert CSV data into the created table
     """
     # Read CSV file
-    df = pd.read_csv(csv_file_path)
-    
+    data = pd.read_csv(csv_file_path)
+    data['Purchase Date'] = pd.to_datetime(data['Purchase Date'])
+    data['Year'] = data['Purchase Date'].dt.year
+    data['Month'] = data['Purchase Date'].dt.month
+    data['Day']=data['Purchase Date'].dt.day
+
+    categorical_column = data.select_dtypes(include=['object']).columns
+
+    # One hot encoding
+    data = pd.get_dummies(data,columns=['Gender','Payment Method','Product Category'],drop_first=True)
+
+
+    data.update(data[['Returns']].fillna(data['Returns'].mode()[0]))
+
+    for col in data.columns:
+        if data[col].dtype == bool:
+            data[col] = data[col].astype(float)
+
     # Insert data into table
-    df.to_sql(table_name, engine, if_exists='replace', index=False)
+    data.to_sql(table_name, engine, if_exists='replace', index=False)
     
     print(f"Data inserted into table '{table_name}' successfully!")
