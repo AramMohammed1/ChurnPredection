@@ -1,14 +1,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from typing import List, Optional
-import math
+from pydantic import BaseModel
 from sklearn.preprocessing import StandardScaler
-import pickle
+import joblib
+import math
 import pandas as pd
+import numpy as np
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=10000):
@@ -152,17 +152,26 @@ num_layers = 2
 def load_model():
     """Load the trained model from best_model.pth"""
     global model, scaler
-    
+        # Try to load the scaler if it was saved
+    try:
+        scaler = joblib.load("churn_service\\scaler.pkl")
+        print(scaler)
+        print("Scaler loaded successfully!")
+        
+    except FileNotFoundError:
+        print("Error: scaler.pkl not found. You may need to save the scaler from training.")
+        scaler = None
+
     try:
         # Load the model state
-        checkpoint = torch.load('best_model.pth', map_location=torch.device('cpu'))
+        checkpoint = torch.load('churn_service\\best_model.pth', map_location=torch.device('cpu'))
         
         # Extract model parameters
         if 'model_state_dict' in checkpoint:
             state_dict = checkpoint['model_state_dict']
         else:
             state_dict = checkpoint
-            
+                
         # Initialize model with the correct parameters from training
         model = ChurnModel(
             input_size=input_size,
@@ -175,15 +184,6 @@ def load_model():
         model.load_state_dict(state_dict)
         model.eval()
         
-        # Try to load the scaler if it was saved
-        try:
-            with open('scaler.pkl', 'rb') as f:
-                scaler = pickle.load(f)
-            print("Scaler loaded successfully!")
-        except FileNotFoundError:
-            print("Warning: scaler.pkl not found. You may need to save the scaler from training.")
-            scaler = None
-        
         print(f"Model loaded successfully!")
         print(f"Sequence length: {seq_length}")
         print(f"Features per time step: {num_features}")
@@ -195,51 +195,3 @@ def load_model():
 
 
 
-def predict_churn(input_data: ChurnPredictionInput):
-    if model is None:
-        raise HTTPException(status_code=500, detail="Model not loaded")
-    
-    try:
-        # Prepare sequence data
-        if len(input_data.sequence_data) != seq_length * num_features:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Expected {seq_length * num_features} features in sequence_data, got {len(input_data.sequence_data)}"
-            )
-        sequence = input_data.sequence_data
-        # Reshape to (batch_size, seq_length, num_features)
-        sequence_tensor = torch.tensor(sequence, dtype=torch.float32).reshape(1, seq_length, num_features)
-        
-        # Scale the data if scaler is available
-        if scaler is not None:
-            # Reshape for scaling: (batch_size * seq_length, num_features)
-            sequence_reshaped = sequence_tensor.reshape(-1, num_features)
-            # Scale the data
-            sequence_scaled = scaler.transform(sequence_reshaped)
-            # Reshape back to (batch_size, seq_length, num_features)
-            sequence_tensor = torch.tensor(sequence_scaled, dtype=torch.float32).reshape(-1, seq_length, num_features)
-        
-        # Make prediction
-        with torch.no_grad():
-            prediction = model(sequence_tensor)
-            churn_probability = prediction.item()
-        
-        # Determine churn prediction and confidence
-        churn_prediction = churn_probability > 0.5
-        
-        if churn_probability > 0.8 or churn_probability < 0.2:
-            confidence = "High"
-        elif churn_probability > 0.6 or churn_probability < 0.4:
-            confidence = "Medium"
-        else:
-            confidence = "Low"
-        
-        return ChurnPredictionResponse(
-            customer_id=input_data.customer_id,
-            churn_probability=round(churn_probability, 4),
-            churn_prediction=churn_prediction,
-            confidence=confidence
-        )
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")

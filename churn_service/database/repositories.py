@@ -1,25 +1,29 @@
-
 import pandas as pd
 from sqlalchemy.orm import Session
+import torch
 from sqlalchemy import text
-from .database import get_db,engine
+from . import get_db,engine
+import joblib
+import numpy as np
+from fastapi import HTTPException
+from .. import churn_service
+from ..churn_service import ChurnPredictionResponse
 
-# Method 1: Using raw SQL
-def get_customer_data():
-    db = next(get_db())
-    try:
-        # Get all rows
-        result = db.execute(text("SELECT * FROM customer_data where \"Customer ID\" = 44605 "))
-        rows = result.fetchall()
-        return rows
-    finally:
-        db.close()
 
-# Method 2: Using pandas (since your data was loaded via pandas)
-def get_customer_data_pandas():
-    
-    query = "SELECT * FROM customer_data where \"Customer ID\" = 44605 "
-    df = pd.read_sql(query, engine)
+
+def get_customer (customer_id: int, table_name: str)->pd.DataFrame:
+    """Get specific customer by ID"""
+    query = f"SELECT * FROM {table_name} WHERE \"Customer ID\" = %(customer_id)s"
+    df = pd.read_sql(query, engine, params={"customer_id": customer_id, "table_name": table_name})
+    if df.empty:
+        raise HTTPException(status_code=404, detail=f"customer {customer_id} not found")
+    return df   
+ 
+def get_all_customers_from_db(table_name:str)->pd.DataFrame:
+    query = f"SELECT DISTINCT \"Customer ID\" FROM {table_name}"
+    df = pd.read_sql(query,engine,params={"table_name": table_name})
+    if df.empty:
+        raise HTTPException(status_code=404,detail=f"table {table_name} not found")
     return df
 
 
@@ -50,3 +54,4 @@ def insert_csv_data_to_table(csv_file_path, table_name, engine):
     data.to_sql(table_name, engine, if_exists='replace', index=False)
     
     print(f"Data inserted into table '{table_name}' successfully!")
+    
