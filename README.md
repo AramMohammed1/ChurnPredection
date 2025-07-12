@@ -1,75 +1,124 @@
-# Churn Prediction Project
+# Churn Prediction System
 
-A FastAPI-based application for customer churn prediction with improved database connection handling using context managers.
+This project consists of a FastAPI backend service for churn prediction and a React frontend to display the results.
 
-## Features
+## Project Structure
 
-- **Context Manager Database Connections**: Automatic resource management for database connections
-- **SQLAlchemy Integration**: ORM support with automatic session management
-- **Raw PostgreSQL Support**: Direct database access with connection pooling
-- **Dynamic Table Creation**: Create tables from CSV files
-- **RESTful API**: FastAPI endpoints for data retrieval and analysis
-
-## Database Connection Management
-
-### SQLAlchemy Context Manager
-
-```python
-from database import get_db
-
-# Automatic session management with commit/rollback
-with get_db() as db:
-    # Your database operations here
-    result = db.query(SomeModel).all()
-    # Session automatically committed on success, rolled back on error
+```
+├── churn_service/          # FastAPI backend service
+│   ├── main.py            # FastAPI application
+│   ├── domain.py          # Business logic for churn prediction
+│   ├── churn_service.py   # ML model and prediction logic
+│   ├── models.py          # Database models
+│   ├── database/          # Database configuration
+│   ├── scaler.pkl         # Trained scaler
+│   ├── best_model.pth     # Trained model
+│   └── ecommerce_customer_data_large.csv  # Sample data
+├── Frontend/              # React frontend
+│   └── src/
+│       ├── components/
+│       │   └── ChurnPrediction.tsx  # Main churn prediction component
+│       └── services/
+│           └── churnService.ts       # API service
+└── test_api.py            # API testing script
 ```
 
-### Raw PostgreSQL Context Manager
+## Setup Instructions
 
-```python
-from database import get_raw_db_connection
-from psycopg2.extras import RealDictCursor
+### 1. Backend Setup (Churn Service)
 
-# Automatic connection management
-with get_raw_db_connection() as connection:
-    with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-        cursor.execute("SELECT * FROM table_name")
-        result = cursor.fetchall()
-    # Connection automatically closed
-```
+1. **Navigate to the churn service directory:**
+   ```bash
+   cd churn_service
+   ```
 
-## Installation
+2. **Install Python dependencies:**
+   ```bash
+   pip install fastapi uvicorn pandas numpy torch scikit-learn sqlalchemy
+   ```
 
-1. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
+3. **Start the FastAPI server:**
+   ```bash
+   uvicorn main:app --reload --host 0.0.0.0 --port 8000
+   ```
 
-2. Set up PostgreSQL database:
-   - Create database: `churn_prediction_db`
-   - Update connection string in `database.py` if needed
+   The server will start on `http://localhost:8000`
 
-3. Run the application:
-```bash
-uvicorn main:app --reload
-```
+4. **Test the API endpoints:**
+   ```bash
+   python test_api.py
+   ```
+
+### 2. Frontend Setup
+
+1. **Navigate to the Frontend directory:**
+   ```bash
+   cd Frontend
+   ```
+
+2. **Install Node.js dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Start the React development server:**
+   ```bash
+   npm run dev
+   ```
+
+   The frontend will start on `http://localhost:5173` (or `http://localhost:3000`)
 
 ## API Endpoints
 
-- `GET /`: Hello world endpoint
-- `GET /data/{table_name}`: Retrieve all data from a table
-- `GET /data/{table_name}/filter`: Filter data with conditions
-- `GET /schema/{table_name}`: Get table schema
-- `GET /count/{table_name}`: Get row count
+The backend provides the following endpoints:
 
-## Benefits of Context Managers
+- `GET /customers/all/{table_name}/` - Get all customers
+- `GET /customers/{table_name}/{customer_id}` - Get specific customer
+- `GET /Churns/?table_name={table_name}` - Get churn predictions for all customers
+- `GET /customers_predicts/{customer_id}` - Get churn prediction for specific customer
 
-1. **Automatic Resource Cleanup**: Connections are automatically closed
-2. **Transaction Management**: Automatic commit/rollback handling
-3. **Error Handling**: Graceful error recovery
-4. **Cleaner Code**: No manual connection management needed
-5. **Thread Safety**: Proper connection handling in multi-threaded environments
+## Features
 
-## Example Usage
+### Frontend Features:
+- **Real-time Data**: Fetches churn predictions from the backend API
+- **High-Risk Customer Display**: Shows customers with highest churn probability
+- **Summary Statistics**: Displays high-risk count, at-risk revenue, and retention rate
+- **Loading States**: Shows loading spinner while fetching data
+- **Error Handling**: Displays error messages if API calls fail
+- **Responsive Design**: Works on desktop and mobile devices
 
-See `example_usage.py` for comprehensive examples of using the context managers.
+### Backend Features:
+- **ML Model Integration**: Uses trained PyTorch model for predictions
+- **Database Integration**: Stores customer data in SQLite database
+- **CORS Support**: Allows frontend to make API calls
+- **RESTful API**: Clean API design with proper error handling
+
+## Troubleshooting
+
+### Common Issues:
+
+1. **CORS Errors**: Make sure the backend is running and CORS is properly configured
+2. **Model Loading Errors**: Ensure `best_model.pth` and `scaler.pkl` files exist
+3. **Database Errors**: Check if the database file exists and has proper permissions
+4. **Port Conflicts**: Make sure ports 8000 (backend) and 5173/3000 (frontend) are available
+
+### Testing:
+
+Run the test script to verify API functionality:
+```bash
+python test_api.py
+```
+
+## Data Flow
+
+1. Frontend loads and calls `/Churns/` and `/customers/all/ecommerce/` endpoints
+2. Backend processes customer data through the ML model
+3. Frontend receives prediction data and displays high-risk customers
+4. Summary statistics are calculated and displayed
+
+## Model Information
+
+- **Model Type**: Transformer-based neural network
+- **Input**: Customer behavior sequences (10 time steps, 14 features each)
+- **Output**: Churn probability (0-1)
+- **Features**: Product price, quantity, total amount, returns, age, date features, payment method, product category
