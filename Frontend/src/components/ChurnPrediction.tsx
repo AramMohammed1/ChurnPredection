@@ -96,12 +96,15 @@ export const ChurnPrediction = () => {
     
     // Calculate at-risk revenue (simplified calculation)
     const highRiskCustomers = allPredictions.filter(p => p.churn_probability > 0.8);
-    const atRiskRevenue = highRiskCustomers.length * 2500; // Average customer value
-    
+    const atRiskRevenue = highRiskCustomers.length * 2500; //should be calculated in a way    
     return {
       highRiskCount,
       atRiskRevenue: Math.round(atRiskRevenue / 1000), // In thousands
-      retentionRate: 84.2 
+      retentionRate: customers.length > 0
+        ? Math.round(
+            ((customers.length - allPredictions.filter(p => p.churn_probability > 0.8).length) / customers.length) * 1000
+          ) / 10 
+        : 0
     };
   };
 
