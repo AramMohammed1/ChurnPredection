@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { AlertTriangle, Users, TrendingDown, Target, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { churnService, ChurnData, Customer, ChurnPredictionResponse } from "@/services/churnService";
+import { churnService, ChurnData, Customer, ChurnPredictionResponse, ProgressResponse } from "@/services/churnService";
 
 interface ChurnCustomer {
   id: string;
@@ -21,25 +21,52 @@ export const ChurnPrediction = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<ProgressResponse | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const churnResponse = await churnService.getChurnedCustomers();
-        // Fetch customer details by ID for each churned customer
-        const customerIds = Object.keys(churnResponse).map(id => parseInt(id));
-        const customersResponse: any[] = await Promise.all(
-          customerIds.map(id => churnService.getCustomerById(id).then(data => Array.isArray(data) ? data[0] : data))
-        );
-
-        setChurnData(churnResponse);
-        setCustomers(customersResponse);
+        setError(null);
+        
+        // Start batch prediction
+        const taskResponse = await churnService.startBatchPrediction();
+        setTaskId(taskResponse.task_id);
+        
+        // Start polling for progress
+        const pollInterval = setInterval(async () => {
+          try {
+            const progressData = await churnService.getProgress(taskResponse.task_id);
+            setProgress(progressData);
+            
+            if (progressData.status === 'done' && progressData.result) {
+              clearInterval(pollInterval);
+              setChurnData(progressData.result);
+              
+              // Fetch customer details for the predicted customers
+              const customerIds = Object.keys(progressData.result).map(id => parseInt(id));
+              const customersResponse: any[] = await Promise.all(
+                customerIds.map(id => churnService.getCustomerById(id).then(data => Array.isArray(data) ? data[0] : data))
+              );
+              setCustomers(customersResponse);
+              setLoading(false);
+            } else if (progressData.status === 'failed') {
+              clearInterval(pollInterval);
+              setError(progressData.error || 'Prediction failed');
+              setLoading(false);
+            }
+          } catch (err) {
+            console.error('Error polling progress:', err);
+          }
+        }, 1000); // Poll every second
+        
+        // Cleanup interval on unmount
+        return () => clearInterval(pollInterval);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch data');
-        console.error('Error fetching data:', err);
-      } finally {
+        setError(err instanceof Error ? err.message : 'Failed to start prediction');
         setLoading(false);
+        console.error('Error starting prediction:', err);
       }
     };
 
@@ -109,10 +136,28 @@ export const ChurnPrediction = () => {
   };
 
   if (loading) {
+    const progressPercentage = progress ? Math.round((progress.processed / progress.total) * 100) : 0;
+    
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-        <span className="ml-2 text-lg">Loading churn predictions...</span>
+      <div className="flex flex-col items-center justify-center h-64 space-y-6">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">Analyzing Customer Data</h3>
+          <p className="text-slate-600 mb-4">Processing customer records for churn prediction...</p>
+        </div>
+        
+        <div className="w-full max-w-md space-y-2">
+          <div className="flex justify-between text-sm text-slate-600">
+            <span>Progress</span>
+            <span>{progressPercentage}%</span>
+          </div>
+          <Progress value={progressPercentage} className="h-3" />
+          {progress && (
+            <div className="text-center text-sm text-slate-500">
+              {progress.processed} of {progress.total} customers processed
+            </div>
+          )}
+        </div>
       </div>
     );
   }

@@ -89,10 +89,15 @@ def predict_churn(customer_id, table_name):
 def predict_churned_customers(table_name):
     df = get_all_customers_from_db(table_name)
     predictions = {}
+    sum = 0
     for customer_id in df['Customer ID']:
         result, label = predict_churn(customer_id, table_name)
         predictions[customer_id] = {
             "prediction": result,
             "actual": label
         }
+        
+        if result[len(result)-1].churn_prediction != label[len(result)-1]:
+            sum+=1
+    print(f"{sum} out of {len(predictions)}")
     return predictions
