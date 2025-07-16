@@ -45,7 +45,7 @@ const Index = () => {
                 AI-Powered E-commerce Analytics
               </h1>
               <p className="text-xl text-slate-300 max-w-2xl mx-auto">
-                Unlock powerful insights with machine learning. Predict churn, segment customers, 
+                Unlock powerful insights with artifical intellgence. Predict churn, segment customers, 
                 and maximize lifetime value with our advanced analytics platform.
               </p>
             </div>

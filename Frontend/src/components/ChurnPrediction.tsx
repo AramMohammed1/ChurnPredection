@@ -119,17 +119,17 @@ export const ChurnPrediction = () => {
   const calculateSummaryStats = () => {
     if (!churnData) return { highRiskCount: 0, atRiskRevenue: 0, retentionRate: 84.2 };
     const allPredictions = Object.values(churnData).flatMap(data => data.prediction);
-    const highRiskCount = allPredictions.filter(p => p.churn_probability > 0.8).length;
+    const highRiskCount = allPredictions.filter(p => p.churn_probability > 0.5).length;
     
     // Calculate at-risk revenue (simplified calculation)
-    const highRiskCustomers = allPredictions.filter(p => p.churn_probability > 0.8);
+    const highRiskCustomers = allPredictions.filter(p => p.churn_probability > 0.5);
     const atRiskRevenue = highRiskCustomers.length * 2500; //should be calculated in a way    
     return {
       highRiskCount,
       atRiskRevenue: Math.round(atRiskRevenue / 1000), // In thousands
       retentionRate: customers.length > 0
         ? Math.round(
-            ((customers.length - allPredictions.filter(p => p.churn_probability > 0.8).length) / customers.length) * 1000
+            ((customers.length - allPredictions.filter(p => p.churn_probability > 0.5).length) / customers.length) * 1000
           ) / 10 
         : 0
     };

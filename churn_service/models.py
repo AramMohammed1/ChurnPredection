@@ -1,20 +1,20 @@
 import pandas as pd
 from .database import Base
-from sqlalchemy import TIMESTAMP, text,create_engine, MetaData, Table, Column, Integer, String, Float, DateTime, Boolean
+from sqlalchemy import TIMESTAMP, text,create_engine, MetaData, Table, Column, Integer, String, Float, DateTime, Boolean, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
+from datetime import datetime
 
 
-class Post(Base):
-    __tablename__ = "posts"
 
-    id = Column(Integer,primary_key=True,nullable=False)
-    title = Column(String,nullable=False)
-    content = Column(String,nullable=False)
-    published = Column(Boolean, server_default='TRUE')
-    created_at = Column(TIMESTAMP(timezone=True), server_default=text('now()'))
-
-
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_deleted = Column(Boolean, default=False)
 
 
 

@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 import numpy as np
 import joblib
@@ -8,10 +9,16 @@ import uuid
 import threading
 from typing import Dict, Optional
 from . import models
-from .database import engine
+from .database import engine,get_db
 from .database.repositories import get_all_customers_from_db,get_customer,insert_csv_data_to_table
 from . import churn_service
 from .domain import get_customer_sequence_scaled, predict_churn, predict_churned_customers
+from .models import User
+from .auth_utils import hash_password, verify_password, create_access_token, decode_access_token
+from sqlalchemy.orm import Session
+from fastapi import Depends, status, Request
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel
 
 # Global task store to track progress
 task_store: Dict[str, Dict] = {}
@@ -103,7 +110,6 @@ async def startup_event():
     
 @app.post("/create_table")
 async def create_table(table_name: str, csv_file_path: str):
-    #
     # models.create_table_from_csv(csv_file_path, table_name, engine)
     insert_csv_data_to_table(csv_file_path, table_name, engine)
     return {"message": "Table created successfully"}
@@ -227,3 +233,78 @@ async def predict_churn_batch(table_name: str = "ecommerce"):
 @app.get("/customers_predicts/{customer_id}")
 async def predictChurn(customer_id: int):
     return predict_churn(customer_id, "ecommerce")
+
+# OAuth2 scheme for token extraction
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+# Pydantic schemas
+class UserCreate(BaseModel):
+    username: str
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+# Dependency to get current user
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    payload = decode_access_token(token)
+    if payload is None or "sub" not in payload:
+        raise credentials_exception
+    username = payload["sub"]
+    user = db.query(User).filter(User.username == username, User.is_deleted == False).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+@app.post("/register", response_model=Token)
+def register(user: UserCreate, db: Session = Depends(get_db)):
+    # Check if user exists
+    if db.query(User).filter((User.username == user.username) or (User.email == user.email)).first():
+        raise HTTPException(status_code=400, detail="Username or email already registered")
+    hashed_pw = hash_password(user.password)
+    db_user = User(username=user.username, email=user.email, hashed_password=hashed_pw)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    # Create JWT
+    access_token = create_access_token({"sub": db_user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
+
+def check(email):
+
+    if(re.fullmatch(regex, email)):
+        return True
+    else:
+        return False
+
+
+
+@app.post("/login", response_model=Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    if(check(form_data.username)):
+        db_user = db.query(User).filter(User.email == form_data.username, User.is_deleted == False).first()
+    else:
+        db_user = db.query(User).filter(User.username == form_data.username, User.is_deleted == False).first()
+    if not db_user or not verify_password(form_data.password, db_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+    access_token = create_access_token({"sub": db_user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/me")
+def read_users_me(current_user: User = Depends(get_current_user)):
+    return {"username": current_user.username, "email": current_user.email}
