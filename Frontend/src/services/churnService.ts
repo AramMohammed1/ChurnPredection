@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export interface ChurnPredictionResponse {
   customer_id: number;
@@ -36,7 +36,6 @@ export interface Customer {
   [key: string]: any;
 }
 
-
 export interface CustomerData {
   "id": 44605,
   "name": string;
@@ -45,6 +44,7 @@ export interface CustomerData {
   "last_purchase_date": string;
   [key: string]: any;
 }
+
 export interface ChurnData {
   [customerId: number]: {
     prediction: ChurnPredictionResponse[];
@@ -52,10 +52,22 @@ export interface ChurnData {
   };
 }
 
+import { authService } from './authService';
+
 class ChurnService {
+  private getHeaders(): HeadersInit {
+    const authHeaders = authService.getAuthHeaders();
+    return {
+      'Content-Type': 'application/json',
+      ...authHeaders,
+    };
+  }
+
   async getChurnedCustomers(tableName: string = 'ecommerce'): Promise<ChurnData> {
     try {
-      const response = await fetch(`${API_BASE_URL}/Churns/?table_name=${tableName}`);
+      const response = await fetch(`${API_BASE_URL}/Churns/?table_name=${tableName}`, {
+        headers: this.getHeaders(),
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -68,7 +80,9 @@ class ChurnService {
  
   async getAllCustomers(tableName: string = 'ecommerce'): Promise<Customer[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/customers/all/${tableName}/`);
+      const response = await fetch(`${API_BASE_URL}/customers/all/${tableName}/`, {
+        headers: this.getHeaders(),
+      });
      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -82,7 +96,9 @@ class ChurnService {
 
   async getCustomerById(customerId: number, tableName: string = 'ecommerce'): Promise<CustomerData[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/customers/${tableName}/${customerId}/data`);
+      const response = await fetch(`${API_BASE_URL}/customers/${tableName}/${customerId}/data`, {
+        headers: this.getHeaders(),
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -95,7 +111,9 @@ class ChurnService {
 
   async predictChurn(customerId: number): Promise<ChurnPredictionResponse[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/customers_predicts/${customerId}`);
+      const response = await fetch(`${API_BASE_URL}/customers_predicts/${customerId}`, {
+        headers: this.getHeaders(),
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -110,7 +128,8 @@ class ChurnService {
   async startBatchPrediction(tableName: string = 'ecommerce'): Promise<TaskResponse> {
     try {
       const response = await fetch(`${API_BASE_URL}/predict_churn_batch?table_name=${tableName}`, {
-        method: 'POST'
+        method: 'POST',
+        headers: this.getHeaders(),
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -124,7 +143,9 @@ class ChurnService {
 
   async getProgress(taskId: string): Promise<ProgressResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/progress/${taskId}`);
+      const response = await fetch(`${API_BASE_URL}/progress/${taskId}`, {
+        headers: this.getHeaders(),
+      });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

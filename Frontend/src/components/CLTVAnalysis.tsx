@@ -97,7 +97,7 @@ export const CLTVAnalysis = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-amber-600">18.3%</div>
-            <p className="text-xs text-slate-500 mt-1">CLTV '>' $2,500</p>
+            <p className="text-xs text-slate-500 mt-1">CLTV &gt; $2,500</p>
           </CardContent>
         </Card>
       </div>

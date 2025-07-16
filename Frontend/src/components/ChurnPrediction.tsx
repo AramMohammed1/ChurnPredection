@@ -24,7 +24,28 @@ export const ChurnPrediction = () => {
   const [progress, setProgress] = useState<ProgressResponse | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
 
+  const CHURN_CACHE_KEY = "churnPredictionData";
+  const CUSTOMER_CACHE_KEY = "churnPredictionCustomers";
+  const CACHE_EXPIRY_KEY = "churnPredictionExpiry";
+  const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in ms
+
   useEffect(() => {
+    const cachedChurn = localStorage.getItem(CHURN_CACHE_KEY);
+    const cachedCustomers = localStorage.getItem(CUSTOMER_CACHE_KEY);
+    const expiry = localStorage.getItem(CACHE_EXPIRY_KEY);
+
+    if (
+      cachedChurn &&
+      cachedCustomers &&
+      expiry &&
+      Date.now() < Number(expiry)
+    ) {
+      setChurnData(JSON.parse(cachedChurn));
+      setCustomers(JSON.parse(cachedCustomers));
+      setLoading(false);
+      return;
+    }
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -50,6 +71,12 @@ export const ChurnPrediction = () => {
                 customerIds.map(id => churnService.getCustomerById(id).then(data => Array.isArray(data) ? data[0] : data))
               );
               setCustomers(customersResponse);
+
+              // Cache results
+              localStorage.setItem(CHURN_CACHE_KEY, JSON.stringify(progressData.result));
+              localStorage.setItem(CUSTOMER_CACHE_KEY, JSON.stringify(customersResponse));
+              localStorage.setItem(CACHE_EXPIRY_KEY, (Date.now() + CACHE_DURATION).toString());
+
               setLoading(false);
             } else if (progressData.status === 'failed') {
               clearInterval(pollInterval);
@@ -72,6 +99,13 @@ export const ChurnPrediction = () => {
 
     fetchData();
   }, []);
+
+  const handleRefresh = () => {
+    localStorage.removeItem(CHURN_CACHE_KEY);
+    localStorage.removeItem(CUSTOMER_CACHE_KEY);
+    localStorage.removeItem(CACHE_EXPIRY_KEY);
+    window.location.reload();
+  };
 
   const getChurnColor = (probability: number) => {
     if (probability >= 80) return "text-red-600 bg-red-50 border-red-200";
@@ -180,6 +214,7 @@ export const ChurnPrediction = () => {
 
   return (
     <div className="space-y-6">
+      <button onClick={handleRefresh} className="btn btn-secondary mb-4">Refresh Prediction</button>
       {/* Summary Cards */}
       <div className="grid md:grid-cols-3 gap-6">
         <Card>
