@@ -14,7 +14,7 @@ from .database.repositories import get_all_customers_from_db,get_customer,insert
 from . import churn_service
 from .domain import get_customer_sequence_scaled, predict_churn, predict_churned_customers
 from .models import User
-from .auth_utils import hash_password, verify_password, create_access_token, decode_access_token
+from .auth_utils import hash_password, verify_password, create_access_token, create_refresh_token, decode_access_token, decode_refresh_token
 from sqlalchemy.orm import Session
 from fastapi import Depends, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -249,6 +249,7 @@ class UserLogin(BaseModel):
 
 class Token(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
 
 # Dependency to get current user
@@ -277,9 +278,10 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    # Create JWT
+    # Create JWT tokens
     access_token = create_access_token({"sub": db_user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = create_refresh_token({"sub": db_user.username})
+    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 
 regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
@@ -302,9 +304,28 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     if not db_user or not verify_password(form_data.password, db_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     access_token = create_access_token({"sub": db_user.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    refresh_token = create_refresh_token({"sub": db_user.username})
+    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 
 @app.get("/me")
 def read_users_me(current_user: User = Depends(get_current_user)):
     return {"username": current_user.username, "email": current_user.email}
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+@app.post("/refresh", response_model=Token)
+def refresh_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):
+    payload = decode_refresh_token(request.refresh_token)
+    if payload is None or "sub" not in payload:
+        raise HTTPException(status_code=401, detail="Invalid refresh token")
+    
+    username = payload["sub"]
+    user = db.query(User).filter(User.username == username, User.is_deleted == False).first()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    access_token = create_access_token({"sub": user.username})
+    new_refresh_token = create_refresh_token({"sub": user.username})
+    return {"access_token": access_token, "refresh_token": new_refresh_token, "token_type": "bearer"}

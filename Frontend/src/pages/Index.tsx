@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,10 +26,51 @@ import { CLTVAnalysis } from "@/components/CLTVAnalysis";
 import { DataImport } from "@/components/DataImport";
 import { RevenueChart } from "@/components/RevenueChart";
 import { EngagementMetrics } from "@/components/EngagementMetrics";
+import { authService } from "@/services/authService";
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        // Check if user is authenticated on app load
+        if (authService.isAuthenticated()) {
+          // Verify the token is still valid by fetching user data
+          const user = await authService.getCurrentUser();
+          if (user) {
+            setIsAuthenticated(true);
+          } else {
+            // Token is invalid, clear it
+            authService.logout();
+          }
+        }
+      } catch (error) {
+        console.error("Error checking auth status:", error);
+        authService.logout();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuthStatus();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl mb-4">
+            <BarChart3 className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Loading...</h2>
+          <p className="text-slate-300">Checking authentication status</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -131,7 +172,10 @@ const Index = () => {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={() => setIsAuthenticated(false)}
+              onClick={() => {
+                authService.logout();
+                setIsAuthenticated(false);
+              }}
             >
               Logout
             </Button>

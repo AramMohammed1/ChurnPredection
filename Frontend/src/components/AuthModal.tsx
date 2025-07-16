@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { authService } from "@/services/authService";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -26,9 +27,6 @@ export const AuthModal = ({ isOpen, onClose, onAuthenticated }: AuthModalProps) 
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [loginFieldError, setLoginFieldError] = useState<string | null>(null);
   const [signupFieldError, setSignupFieldError] = useState<string | null>(null);
-
-  // Helper: get backend URL
-  const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
   // Email regex for validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -57,27 +55,11 @@ export const AuthModal = ({ isOpen, onClose, onAuthenticated }: AuthModalProps) 
     }
     setIsLoading(true);
     try {
-      const formData = new URLSearchParams();
-      formData.append("username", loginEmail);
-      formData.append("password", loginPassword);
-      const res = await fetch(`${API_BASE}/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: formData.toString(),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.detail || "Login failed");
-        setIsLoading(false);
-        return;
-      }
-      localStorage.setItem("token", data.access_token);
+      await authService.login(loginEmail, loginPassword);
       setIsLoading(false);
       onAuthenticated();
     } catch (err) {
-      setError("Network error");
+      setError(err instanceof Error ? err.message : "Login failed");
       setIsLoading(false);
     }
   };
@@ -112,28 +94,11 @@ export const AuthModal = ({ isOpen, onClose, onAuthenticated }: AuthModalProps) 
     }
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: signupName,
-          email: signupEmail,
-          password: signupPassword,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.detail || "Signup failed");
-        setIsLoading(false);
-        return;
-      }
-      localStorage.setItem("token", data.access_token);
+      await authService.register(signupName, signupEmail, signupPassword);
       setIsLoading(false);
       onAuthenticated();
     } catch (err) {
-      setError("Network error");
+      setError(err instanceof Error ? err.message : "Signup failed");
       setIsLoading(false);
     }
   };
