@@ -1,3 +1,4 @@
+from tkinter import W
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -181,8 +182,9 @@ def load_model():
             num_layers=num_layers,
             output_size=1
         )
-        model.load_state_dict(state_dict)
-        model.eval()
+        with torch.no_grad():
+            model.load_state_dict(state_dict)
+            model.eval()
         
         print(f"Model loaded successfully!")
         print(f"Sequence length: {seq_length}")

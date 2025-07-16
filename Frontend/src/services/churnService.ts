@@ -7,6 +7,18 @@ export interface ChurnPredictionResponse {
   confidence: string;
 }
 
+export interface ProgressResponse {
+  processed: number;
+  total: number;
+  status: 'in_progress' | 'done' | 'failed';
+  result?: ChurnData;
+  error?: string;
+}
+
+export interface TaskResponse {
+  task_id: string;
+}
+
 export interface Customer {
   'Customer ID': number;
   'Customer Name': string;
@@ -91,6 +103,34 @@ class ChurnService {
       return data[0]; // The API returns [result, labels], we want the result
     } catch (error) {
       console.error('Error predicting churn:', error);
+      throw error;
+    }
+  }
+
+  async startBatchPrediction(tableName: string = 'ecommerce'): Promise<TaskResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/predict_churn_batch?table_name=${tableName}`, {
+        method: 'POST'
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error starting batch prediction:', error);
+      throw error;
+    }
+  }
+
+  async getProgress(taskId: string): Promise<ProgressResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/progress/${taskId}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error getting progress:', error);
       throw error;
     }
   }

@@ -4,11 +4,54 @@ import joblib
 from datetime import datetime
 from fastapi import FastAPI,HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import uuid
+import threading
+from typing import Dict, Optional
 from . import models
 from .database import engine
 from .database.repositories import get_all_customers_from_db,get_customer,insert_csv_data_to_table
 from . import churn_service
 from .domain import get_customer_sequence_scaled, predict_churn, predict_churned_customers
+
+# Global task store to track progress
+task_store: Dict[str, Dict] = {}
+
+def create_task() -> str:
+    """Create a new task and return its ID"""
+    task_id = str(uuid.uuid4())
+    task_store[task_id] = {
+        "processed": 0,
+        "total": 0,
+        "status": "in_progress",
+        "result": None,
+        "error": None
+    }
+    return task_id
+
+def update_task_progress(task_id: str, processed: int, total: int, status: str = "in_progress"):
+    """Update task progress"""
+    if task_id in task_store:
+        task_store[task_id].update({
+            "processed": processed,
+            "total": total,
+            "status": status
+        })
+
+def complete_task(task_id: str, result, status: str = "done"):
+    """Mark task as complete with result"""
+    if task_id in task_store:
+        task_store[task_id].update({
+            "status": status,
+            "result": result
+        })
+
+def fail_task(task_id: str, error: str):
+    """Mark task as failed"""
+    if task_id in task_store:
+        task_store[task_id].update({
+            "status": "failed",
+            "error": error
+        })
 
 def fill_nulls_with_mean(df):
     """
@@ -131,6 +174,55 @@ def get_churned_customers(table_name):
 @app.get("/customers/{table_name}/{customer_id}/sequence")
 async def get_customer_sequence(customer_id: int, table_name: str):
     return get_customer_sequence_scaled(customer_id, table_name)
+
+@app.get("/progress/{task_id}")
+async def get_progress(task_id: str):
+    """Get progress for a specific task"""
+    if task_id not in task_store:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    task = task_store[task_id]
+    return {
+        "processed": task["processed"],
+        "total": task["total"],
+        "status": task["status"],
+        "result": task["result"] if task["status"] == "done" else None,
+        "error": task["error"] if task["status"] == "failed" else None
+    }
+
+@app.post("/predict_churn_batch")
+async def predict_churn_batch(table_name: str = "ecommerce"):
+    """Start batch churn prediction with progress tracking"""
+    task_id = create_task()
+    
+    def run_prediction():
+        try:
+            df = get_all_customers_from_db(table_name)
+            total_customers = len(df)
+            update_task_progress(task_id, 0, total_customers)
+            
+            predictions = {}
+            for i, customer_id in enumerate(df['Customer ID']):
+                try:
+                    result, label = predict_churn(customer_id, table_name)
+                    predictions[customer_id] = {
+                        "prediction": result,
+                        "actual": label
+                    }
+                    update_task_progress(task_id, i + 1, total_customers)
+                except Exception as e:
+                    print(f"Error predicting for customer {customer_id}: {e}")
+                    continue
+            
+            complete_task(task_id, predictions)
+        except Exception as e:
+            fail_task(task_id, str(e))
+    
+    # Run prediction in background thread
+    thread = threading.Thread(target=run_prediction)
+    thread.start()
+    
+    return {"task_id": task_id}
 
 @app.get("/customers_predicts/{customer_id}")
 async def predictChurn(customer_id: int):

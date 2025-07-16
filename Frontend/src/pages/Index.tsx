@@ -59,7 +59,7 @@ const Index = () => {
                 Get Started
                 <ArrowUpRight className="ml-2 w-4 h-4" />
               </Button>
-              <Button size="lg" variant="outline" className="text-white border-white hover:bg-white hover:text-slate-900">
+              <Button size="lg" variant="outline" className="text-black border-white hover:from-white-900 to-white-100  hover:text-slate-900">
                 View Demo
               </Button>
             </div>
