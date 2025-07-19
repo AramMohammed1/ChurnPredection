@@ -2,8 +2,10 @@ import re
 import pandas as pd
 import numpy as np
 import joblib
+import os
+import tempfile
 from datetime import datetime
-from fastapi import FastAPI,HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 import uuid
 import threading
@@ -60,6 +62,16 @@ def fail_task(task_id: str, error: str):
             "error": error
         })
 
+def cancel_task(task_id: str):
+    """Cancel a running task"""
+    if task_id in task_store:
+        task_store[task_id].update({
+            "status": "cancelled",
+            "error": "Task was cancelled by user"
+        })
+        return True
+    return False
+
 def fill_nulls_with_mean(df):
     """
     Fill null values in DataFrame with appropriate strategies:
@@ -113,6 +125,102 @@ async def create_table(table_name: str, csv_file_path: str):
     # models.create_table_from_csv(csv_file_path, table_name, engine)
     insert_csv_data_to_table(csv_file_path, table_name, engine)
     return {"message": "Table created successfully"}
+
+from pydantic import BaseModel
+from typing import Dict, Optional
+
+class ColumnMapping(BaseModel):
+    customer_id: str
+    customer_name: str
+    purchase_date: str
+    product_price: str
+    quantity: str
+    total_purchase_amount: str
+    returns: str
+    age: str
+    gender: str
+    payment_method: str
+    product_category: str
+    churn: str
+
+@app.post("/upload_csv")
+async def upload_csv(
+    file: UploadFile = File(...), 
+    table_name: str = Form("ecommerce"),
+    column_mapping_json: Optional[str] = Form(None)
+):
+    """
+    Upload a CSV file and insert it into the database with optional column mapping
+    """
+    try:
+        # Validate file type
+        if not file.filename or not file.filename.endswith('.csv'):
+            raise HTTPException(status_code=400, detail="Only CSV files are allowed")
+        
+        # Parse column mapping if provided
+        column_mapping = None
+        if column_mapping_json:
+            try:
+                import json
+                column_mapping = ColumnMapping(**json.loads(column_mapping_json))
+            except Exception as e:
+                raise HTTPException(status_code=422, detail=f"Invalid column mapping format: {str(e)}")
+        # Create a temporary file to store the uploaded CSV
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
+            # Read the uploaded file content
+            content = await file.read()
+            temp_file.write(content)
+            temp_file_path = temp_file.name
+        try:
+            # Insert the CSV data into the database with column mapping
+            insert_csv_data_to_table(temp_file_path, table_name, engine, column_mapping)
+            print("ok")
+            return {
+                "message": "CSV file uploaded and processed successfully",
+                "filename": file.filename,
+                "table_name": table_name,
+                "size": len(content)
+            }
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+                
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing CSV file: {str(e)}")
+
+@app.post("/validate_csv_columns")
+async def validate_csv_columns(file: UploadFile = File(...)):
+    """
+    Validate CSV file and return available columns for mapping
+    """
+    try:
+        # Validate file type
+        if not file.filename or not file.filename.endswith('.csv'):
+            raise HTTPException(status_code=400, detail="Only CSV files are allowed")
+        
+        # Read CSV headers
+        content = await file.read()
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
+            temp_file.write(content)
+            temp_file_path = temp_file.name
+        
+        try:
+            # Read just the headers
+            df = pd.read_csv(temp_file_path, nrows=0)
+            columns = df.columns.tolist()
+            
+            return {
+                "columns": columns,
+                "filename": file.filename,
+                "total_columns": len(columns)
+            }
+        finally:
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+                
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading CSV file: {str(e)}")
 
 
 @app.get("/customers")
@@ -193,8 +301,19 @@ async def get_progress(task_id: str):
         "total": task["total"],
         "status": task["status"],
         "result": task["result"] if task["status"] == "done" else None,
-        "error": task["error"] if task["status"] == "failed" else None
+        "error": task["error"] if task["status"] in ["failed", "cancelled"] else None
     }
+
+@app.post("/cancel/{task_id}")
+async def cancel_task_endpoint(task_id: str):
+    """Cancel a running task"""
+    if task_id not in task_store:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    if cancel_task(task_id):
+        return {"message": "Task cancelled successfully"}
+    else:
+        raise HTTPException(status_code=400, detail="Failed to cancel task")
 
 @app.post("/predict_churn_batch")
 async def predict_churn_batch(table_name: str = "ecommerce"):

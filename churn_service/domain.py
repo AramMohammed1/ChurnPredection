@@ -101,3 +101,37 @@ def predict_churned_customers(table_name):
             sum+=1
     print(f"{sum} out of {len(predictions)}")
     return predictions
+
+def get_all_customer_sequences_scaled(table_name):
+    numerical_cols = ['Product Price', 'Quantity', 'Total Purchase Amount', 'Returns', 'Age', 'Year', 'Month', 'Day',
+                     'Gender_Male', 'Payment Method_Credit Card', 'Payment Method_PayPal',
+                     'Product Category_Clothing', 'Product Category_Electronics', 'Product Category_Home']
+    df = get_all_customers_from_db(table_name)
+    seq_length = 10
+    churn_offset = 1
+    features = numerical_cols
+    all_sequences = {}
+    for customer_id, customer_data in df.groupby('Customer ID'):
+        customer_data = customer_data.sort_values(by='Purchase Date')
+        sequences = []
+        labels = []
+        for i in range(max(1, len(customer_data) - seq_length + 1)):
+            seq = customer_data.iloc[i:min(i + seq_length, len(customer_data))][features].values
+            if len(seq) < seq_length:
+                pad_shape = (seq_length - len(seq), len(features))
+                padding = np.zeros(pad_shape)
+                seq = np.vstack([seq, padding])
+            if i + seq_length < len(customer_data) - churn_offset:
+                label = 0
+            else:
+                label = customer_data.iloc[min(i + seq_length - 1, len(customer_data) - 1)]['Churn']
+            sequences.append(seq)
+            labels.append(label)
+        X = np.array(sequences)
+        y = np.array(labels)
+        X = X.reshape(X.shape[0], -1)
+        if churn_service.scaler is None:
+            raise HTTPException(status_code=500, detail="Scaler not loaded")
+        x_resampled = churn_service.scaler.transform(X)
+        all_sequences[customer_id] = (x_resampled, y)
+    return all_sequences
