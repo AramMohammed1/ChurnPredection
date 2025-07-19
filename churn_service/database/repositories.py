@@ -13,6 +13,12 @@ from ..churn_service import ChurnPredictionResponse
 
 def get_customer (customer_id: int, table_name: str)->pd.DataFrame:
     """Get specific customer by ID"""
+    # Convert numpy types to Python native types
+    try:
+        customer_id = int(customer_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail=f"Invalid customer_id: {customer_id}")
+    
     query = f"SELECT * FROM {table_name} WHERE \"Customer ID\" = %(customer_id)s"
     df = pd.read_sql(query, engine, params={"customer_id": customer_id, "table_name": table_name})
     if df.empty:

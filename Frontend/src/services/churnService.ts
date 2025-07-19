@@ -65,7 +65,7 @@ class ChurnService {
 
   async getChurnedCustomers(tableName: string = 'ecommerce'): Promise<ChurnData> {
     try {
-      const response = await fetch(`${API_BASE_URL}/Churns/?table_name=${tableName}`, {
+      const response = await fetch(`${API_BASE_URL}/churn/churned_customers?table_name=${tableName}`, {
         headers: this.getHeaders(),
       });
       if (!response.ok) {
@@ -80,7 +80,7 @@ class ChurnService {
  
   async getAllCustomers(tableName: string = 'ecommerce'): Promise<Customer[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/customers/all/${tableName}/`, {
+      const response = await fetch(`${API_BASE_URL}/data/customers/all/${tableName}/`, {
         headers: this.getHeaders(),
       });
      
@@ -96,7 +96,7 @@ class ChurnService {
 
   async getCustomerById(customerId: number, tableName: string = 'ecommerce'): Promise<CustomerData[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/customers/${tableName}/${customerId}/data`, {
+      const response = await fetch(`${API_BASE_URL}/data/customers/${tableName}/${customerId}/data`, {
         headers: this.getHeaders(),
       });
       if (!response.ok) {
@@ -111,7 +111,7 @@ class ChurnService {
 
   async predictChurn(customerId: number): Promise<ChurnPredictionResponse[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/customers_predicts/${customerId}`, {
+      const response = await fetch(`${API_BASE_URL}/churn/predict/${customerId}`, {
         headers: this.getHeaders(),
       });
       if (!response.ok) {
@@ -127,7 +127,7 @@ class ChurnService {
 
   async startBatchPrediction(tableName: string = 'ecommerce'): Promise<TaskResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/predict_churn_batch?table_name=${tableName}`, {
+      const response = await fetch(`${API_BASE_URL}/churn/predict_batch?table_name=${tableName}`, {
         method: 'POST',
         headers: this.getHeaders(),
       });
@@ -143,7 +143,7 @@ class ChurnService {
 
   async getProgress(taskId: string): Promise<ProgressResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/progress/${taskId}`, {
+      const response = await fetch(`${API_BASE_URL}/churn/progress/${taskId}`, {
         headers: this.getHeaders(),
       });
       if (!response.ok) {
@@ -158,7 +158,7 @@ class ChurnService {
 
   async cancelTask(taskId: string): Promise<{ message: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/cancel/${taskId}`, {
+      const response = await fetch(`${API_BASE_URL}/churn/cancel/${taskId}`, {
         method: 'POST',
         headers: this.getHeaders(),
       });

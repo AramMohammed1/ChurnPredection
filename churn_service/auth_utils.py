@@ -6,11 +6,13 @@ from typing import Optional
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+from .config import settings
+
 # JWT settings
-SECRET_KEY = "your_secret_key_here"  # Change this to a strong secret in production
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
-REFRESH_TOKEN_EXPIRE_DAYS = 30  # 30 days
+SECRET_KEY = settings.secret_key
+ALGORITHM = settings.algorithm
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
+REFRESH_TOKEN_EXPIRE_DAYS = settings.refresh_token_expire_days
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)

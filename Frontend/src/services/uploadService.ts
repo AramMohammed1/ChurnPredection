@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export interface UploadResponse {
   message: string;
@@ -55,7 +55,7 @@ class UploadService {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`${API_BASE_URL}/validate_csv_columns`, {
+      const response = await fetch(`${API_BASE_URL}/data/validate_csv_columns`, {
         method: 'POST',
         body: formData,
       });
@@ -117,7 +117,7 @@ class UploadService {
           reject(new Error('Network error during upload'));
         });
 
-        xhr.open('POST', `${API_BASE_URL}/upload_csv`);
+        xhr.open('POST', `${API_BASE_URL}/data/upload_csv`);
         
         // Set headers manually for FormData
         const token = localStorage.getItem('access_token');

@@ -64,7 +64,7 @@ class AuthService {
     formData.append("username", username);
     formData.append("password", password);
 
-    const response = await fetch(`${API_BASE}/login`, {
+    const response = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -84,7 +84,7 @@ class AuthService {
   }
 
   async register(username: string, email: string, password: string): Promise<AuthTokens> {
-    const response = await fetch(`${API_BASE}/register`, {
+    const response = await fetch(`${API_BASE}/auth/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -112,7 +112,7 @@ class AuthService {
       throw new Error("No refresh token available");
     }
 
-    const response = await fetch(`${API_BASE}/refresh`, {
+    const response = await fetch(`${API_BASE}/auth/refresh`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -139,7 +139,7 @@ class AuthService {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/me`, {
+      const response = await fetch(`${API_BASE}/auth/me`, {
         headers: {
           Authorization: `Bearer ${this.accessToken}`,
         },
