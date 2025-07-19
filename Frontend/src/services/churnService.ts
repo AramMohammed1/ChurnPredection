@@ -155,6 +155,22 @@ class ChurnService {
       throw error;
     }
   }
+
+  async cancelTask(taskId: string): Promise<{ message: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/cancel/${taskId}`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error cancelling task:', error);
+      throw error;
+    }
+  }
 }
 
 export const churnService = new ChurnService(); 
