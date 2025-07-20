@@ -33,6 +33,7 @@ export const DataImport = () => {
   const [showColumnMapping, setShowColumnMapping] = useState(false);
   const [csvColumns, setCsvColumns] = useState<string[]>([]);
   const [columnMapping, setColumnMapping] = useState<ColumnMapping | null>(null);
+  const [tableName, setTableName] = useState("");
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -75,7 +76,7 @@ export const DataImport = () => {
     try {
       await uploadService.uploadCSV(
         selectedFile,
-        'ecommerce',
+        tableName,
         columnMapping,
         (progress: UploadProgress) => {
           setUploadProgress(progress.percentage);

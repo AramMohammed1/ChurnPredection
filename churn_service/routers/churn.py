@@ -106,7 +106,7 @@ async def cancel_task_endpoint(task_id: str, current_user: User = Depends(get_cu
 
 @router.post("/predict_batch")
 async def predict_churn_batch(
-    table_name: str = "ecommerce", 
+    table_name: str = "", 
     current_user: User = Depends(get_current_user)
 ):
     """Start batch churn prediction for all customers"""
@@ -154,7 +154,7 @@ async def predict_churn_single(
 ):
     """Predict churn for a single customer"""
     try:
-        result, labels = predict_churn(customer_id, "ecommerce")
+        result, labels = predict_churn(customer_id, f"user_data_{current_user.id}")
         return {
             "customer_id": customer_id,
             "predictions": result,
@@ -165,7 +165,7 @@ async def predict_churn_single(
 
 @router.get("/churned_customers")
 async def get_churned_customers_endpoint(
-    table_name: str = "ecommerce", 
+    table_name: str = "", 
     current_user: User = Depends(get_current_user)
 ):
     """Get all churned customers with predictions"""

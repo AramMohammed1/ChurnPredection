@@ -35,7 +35,7 @@ def get_all_customers_from_db(table_name:str)->pd.DataFrame:
 
 def insert_csv_data_to_table(csv_file_path, table_name, engine, column_mapping=None):
     """ 
-    Insert CSV data into the created table with optional column mapping
+    Insert CSV data into the specified table (now used for per-user tables)
     """
     # Read CSV file
     data = pd.read_csv(csv_file_path, low_memory=False)

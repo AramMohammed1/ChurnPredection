@@ -72,11 +72,11 @@ class UploadService {
   }
 
   async uploadCSV(
-    file: File, 
-    tableName: string = 'ecommerce', 
-    columnMapping?: ColumnMapping,
+    file: File,
+    tableName: string,
+    columnMapping: ColumnMapping | null,
     onProgress?: (progress: UploadProgress) => void
-  ): Promise<UploadResponse> {
+  ): Promise<any> {
     try {
       const formData = new FormData();
       formData.append('file', file);

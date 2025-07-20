@@ -6,6 +6,7 @@ import { AlertTriangle, Users, TrendingDown, Target, Loader2, RefreshCw, X } fro
 import { useEffect, useState } from "react";
 import { churnService, ChurnData, Customer, ChurnPredictionResponse, ProgressResponse } from "@/services/churnService";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from "recharts";
+import { authService } from "@/services/authService";
 
 interface ChurnCustomer {
   id: string;
@@ -55,7 +56,8 @@ export const ChurnPrediction = () => {
         setError(null);
         
         // Start batch prediction
-        const taskResponse = await churnService.startBatchPrediction();
+        const user = await authService.getCurrentUser();
+        const taskResponse = await churnService.startBatchPrediction(`user_data_${user.id}`);
         setTaskId(taskResponse.task_id);
         
         // Start polling for progress
@@ -70,7 +72,8 @@ export const ChurnPrediction = () => {
               setChurnData(progressData.result);
               
               // Fetch all customer details in one call
-              const allCustomers = await churnService.getAllCustomers();
+              const user = await authService.getCurrentUser();
+              const allCustomers = await churnService.getAllCustomers(`user_data_${user.id}`);
               setCustomers(allCustomers);
 
               // Cache results
@@ -82,8 +85,21 @@ export const ChurnPrediction = () => {
             } else if (progressData.status === 'failed' || progressData.status === 'cancelled') {
               clearInterval(interval);
               setPollInterval(null);
-              setError(progressData.error || 'Prediction failed');
-              setLoading(false);
+              if (
+                progressData.error &&
+                (
+                  progressData.error.includes("psycopg2.errors.UndefinedTable") ||
+                  (typeof progressData.error === "object" && progressData.error.code === "UndefinedTable")
+                )
+              ) {
+                setError("Data not found please insert your data first in Data tab");
+                setLoading(false);
+                return;
+              }
+              else{
+                setError(progressData.error || 'Prediction failed');
+                setLoading(false);
+              }
             }
           } catch (err) {
             console.error('Error polling progress:', err);
@@ -138,7 +154,8 @@ export const ChurnPrediction = () => {
       localStorage.removeItem(CACHE_EXPIRY_KEY);
       
       // Start new batch prediction
-      const taskResponse = await churnService.startBatchPrediction();
+      const user = await authService.getCurrentUser();
+      const taskResponse = await churnService.startBatchPrediction(`user_data_${user.id}`);
       setTaskId(taskResponse.task_id);
       
       // Start polling for progress
@@ -153,7 +170,8 @@ export const ChurnPrediction = () => {
             setChurnData(progressData.result);
             
             // Fetch all customer details in one call
-            const allCustomers = await churnService.getAllCustomers();
+            const user = await authService.getCurrentUser();
+            const allCustomers = await churnService.getAllCustomers(`user_data_${user.id}`);
             setCustomers(allCustomers);
 
             // Cache new results
@@ -204,7 +222,7 @@ export const ChurnPrediction = () => {
     
     Object.entries(churnData).forEach(([customerIdStr, data]) => {
       const customerId = parseInt(customerIdStr);
-      const customer = customers.find(c => Number(c['id'] || c['Customer ID']) === customerId);
+      const customer = customers.find(c => Number(c['Customer ID']) === customerId);
       
       if (customer && data.prediction.length > 0) {
         const prediction = data.prediction[0]; // Get the first prediction
@@ -212,11 +230,11 @@ export const ChurnPrediction = () => {
         
         churnCustomers.push({
           id: `${customerId.toString().padStart(3, '0')}`,
-          name: customer['name'] || customer['Customer Name'] || `Customer ${customerId}`,
-          email: customer['email'] || customer['Email'] || `customer${customerId}@email.com`,
+          name: customer['Customer Name'] || `Customer ${customerId}`,
+          email: customer['Email'] || `${customer['Customer Name'].toLowerCase().replace(' ', '')}@email.com`,
           churnProbability,
-          lastPurchase: customer['last_purchase_date'] || customer['lastPurchase'] || customer['Purchase Date'],
-          totalSpent: customer['totalSpent'] || customer['Total Purchase Amount'],
+          lastPurchase: customer['Purchase Date'],
+          totalSpent: String(customer['Total Purchase Amount']),
           customerId
         });
       }
@@ -307,12 +325,19 @@ export const ChurnPrediction = () => {
   };
 
   // Helper to format last purchase days
-  const formatLastPurchase = (days: any) => {
-    if (days === undefined || days === null || isNaN(Number(days))) return 'Unknown';
-    const n = Number(days);
-    if (n === 0) return 'Today';
-    if (n === 1) return '1 day ago';
-    if (n > 1) return `${n} days ago`;
+  const formatLastPurchase = (date: any) => {
+    if (!date) return 'Unknown';
+    const purchaseDate = new Date(date);
+    if (isNaN(purchaseDate.getTime())) return 'Unknown';
+    const now = new Date();
+    // Zero out the time for both dates to compare only the days
+    purchaseDate.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    const diffTime = now.getTime() - purchaseDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return '1 day ago';
+    if (diffDays > 1) return `${diffDays} days ago`;
     return 'Unknown';
   };
 
@@ -404,7 +429,7 @@ export const ChurnPrediction = () => {
             <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-red-600 mb-2">Error Loading Data</h3>
             <p className="text-slate-600">{error}</p>
-            <p className="text-sm text-slate-500 mt-2">Make sure the churn service is running on localhost:8000</p>
+            <p className="text-sm text-slate-500 mt-2">Some error occurred Loading Data Please try again</p>
             <Button 
               onClick={handleRefresh} 
               className="mt-4"

@@ -71,7 +71,7 @@ async def create_table(table_name: str, csv_file_path: str, current_user: User =
 @router.post("/upload_csv")
 async def upload_csv(
     file: UploadFile = File(...), 
-    table_name: str = Form("ecommerce"),
+    table_name: str = Form(...),
     column_mapping_json: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user)
 ):
@@ -100,6 +100,7 @@ async def upload_csv(
             temp_file_path = temp_file.name
         
         try:
+            table_name = f"user_data_{current_user.id}"
             # Insert the CSV data into the database with column mapping
             insert_csv_data_to_table(temp_file_path, table_name, engine, column_mapping)
             return {

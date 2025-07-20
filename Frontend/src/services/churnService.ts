@@ -63,7 +63,7 @@ class ChurnService {
     };
   }
 
-  async getChurnedCustomers(tableName: string = 'ecommerce'): Promise<ChurnData> {
+  async getChurnedCustomers(tableName: string = ''): Promise<ChurnData> {
     try {
       const response = await fetch(`${API_BASE_URL}/churn/churned_customers?table_name=${tableName}`, {
         headers: this.getHeaders(),
@@ -78,7 +78,7 @@ class ChurnService {
     }
   }
  
-  async getAllCustomers(tableName: string = 'ecommerce'): Promise<Customer[]> {
+  async getAllCustomers(tableName:string): Promise<Customer[]> {
     try {
       const response = await fetch(`${API_BASE_URL}/data/customers/all/${tableName}/`, {
         headers: this.getHeaders(),
@@ -94,7 +94,7 @@ class ChurnService {
     }
   }
 
-  async getCustomerById(customerId: number, tableName: string = 'ecommerce'): Promise<CustomerData[]> {
+  async getCustomerById(customerId: number, tableName: string): Promise<CustomerData[]> {
     try {
       const response = await fetch(`${API_BASE_URL}/data/customers/${tableName}/${customerId}/data`, {
         headers: this.getHeaders(),
@@ -125,7 +125,7 @@ class ChurnService {
     }
   }
 
-  async startBatchPrediction(tableName: string = 'ecommerce'): Promise<TaskResponse> {
+  async startBatchPrediction(tableName: string = ''): Promise<TaskResponse> {
     try {
       const response = await fetch(`${API_BASE_URL}/churn/predict_batch?table_name=${tableName}`, {
         method: 'POST',

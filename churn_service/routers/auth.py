@@ -102,10 +102,16 @@ def check(email):
 
 @router.post("/login", response_model=Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(
-        User.username == form_data.username,
-        User.is_deleted == False
-    ).first()
+    if(check(form_data.username)):
+        user = db.query(User).filter(
+            User.email == form_data.username,
+            User.is_deleted == False
+        ).first()
+    else:
+        user = db.query(User).filter(
+            User.username == form_data.username,
+            User.is_deleted == False
+        ).first()
     
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
