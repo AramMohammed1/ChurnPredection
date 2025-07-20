@@ -37,6 +37,11 @@ export const DataImport = () => {
   const [columnMapping, setColumnMapping] = useState<ColumnMapping | null>(null);
   const [tableName, setTableName] = useState("");
   const [uploadHistory, setUploadHistory] = useState<UploadHistoryEntry[]>([]);
+  
+  // API Import states
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState<'idle' | 'importing' | 'success' | 'error'>('idle');
+  const [importMessage, setImportMessage] = useState("");
 
   // Load upload history on component mount
   useEffect(() => {
@@ -224,6 +229,38 @@ export const DataImport = () => {
     }
   };
 
+  const handleApiImport = async () => {
+    if (!endpoint || !apiKey) {
+      setImportMessage("Please provide both API endpoint and API key");
+      setImportStatus('error');
+      return;
+    }
+
+    setIsImporting(true);
+    setImportStatus('importing');
+    setImportMessage("");
+
+    try {
+      const result = await uploadService.importFromAPI(endpoint, apiKey);
+      
+      setImportStatus('success');
+      setImportMessage(`Successfully imported ${result.records_count} records from API`);
+      
+      // Clear form
+      setEndpoint("");
+      setApiKey("");
+      
+      // Refresh upload history
+      const history = await uploadService.getUploadHistory();
+      setUploadHistory(history);
+    } catch (error) {
+      setImportStatus('error');
+      setImportMessage(error instanceof Error ? error.message : "API import failed");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="upload" className="w-full">
@@ -397,18 +434,63 @@ export const DataImport = () => {
                 API Integration
               </CardTitle>
               <CardDescription>
-                Connect to your e-commerce platform or database API
+                Connect to your external API and import data directly into your database
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* API Documentation */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900 mb-2">API Requirements</h4>
+                <div className="text-sm text-blue-800 space-y-2">
+                  <p><strong>Authentication:</strong> Bearer token authentication</p>
+                  <p><strong>Response Format:</strong> JSON array of objects with the following required fields:</p>
+                  <div className="ml-4 space-y-1">
+                    <p>• Customer ID (number)</p>
+                    <p>• Customer Name (string)</p>
+                    <p>• Purchase Date (string, YYYY-MM-DD format)</p>
+                    <p>• Product Price (number)</p>
+                    <p>• Quantity (number)</p>
+                    <p>• Total Purchase Amount (number)</p>
+                    <p>• Returns (number)</p>
+                    <p>• Age (number)</p>
+                    <p>• Gender (string: "Male" or "Female") - raw categorical value</p>
+                    <p>• Payment Method (string: "Credit Card", "PayPal", etc.) - raw categorical value</p>
+                    <p>• Product Category (string: "Electronics", "Clothing", etc.) - raw categorical value</p>
+                    <p>• Churn (number: 0 or 1)</p>
+                  </div>
+                  <p className="mt-2 text-blue-700"><strong>Note:</strong> Categorical data should be returned in raw format. The system will automatically handle one-hot encoding during processing.</p>
+                  <p className="mt-2"><strong>Example Response:</strong></p>
+                  <pre className="bg-blue-100 p-2 rounded text-xs overflow-x-auto">
+{`[
+  {
+    "Customer ID": 1,
+    "Customer Name": "John Doe",
+    "Purchase Date": "2024-01-15",
+    "Product Price": 29.99,
+    "Quantity": 2,
+    "Total Purchase Amount": 59.98,
+    "Returns": 0,
+    "Age": 35,
+    "Gender": "Male",
+    "Payment Method": "Credit Card",
+    "Product Category": "Electronics",
+    "Churn": 0
+  }
+]`}
+                  </pre>
+                </div>
+              </div>
+
+              {/* API Connection Form */}
               <div className="grid gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="api-endpoint">API Endpoint</Label>
                   <Input
                     id="api-endpoint"
-                    placeholder="https://api.yourstore.com/v1"
+                    placeholder="https://api.yourstore.com/v1/customers"
                     value={endpoint}
                     onChange={(e) => setEndpoint(e.target.value)}
+                    disabled={isImporting}
                   />
                 </div>
                 
@@ -416,29 +498,44 @@ export const DataImport = () => {
                   <Label htmlFor="api-key">API Key</Label>
                   <Input
                     id="api-key"
-                    type="password"
                     placeholder="Enter your API key"
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
+                    disabled={isImporting}
                   />
                 </div>
 
-                <Button className="w-fit">
-                  <Database className="w-4 h-4 mr-2" />
-                  Test Connection
+                <Button 
+                  onClick={handleApiImport} 
+                  disabled={isImporting || !endpoint || !apiKey}
+                  className="w-fit"
+                >
+                  {isImporting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      <Database className="w-4 h-4 mr-2" />
+                      Import Data
+                    </>
+                  )}
                 </Button>
+
+                {importMessage && (
+                  <div className={`p-3 rounded-md text-sm ${
+                    importStatus === 'error' 
+                      ? 'bg-red-100 text-red-700' 
+                      : importStatus === 'success'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {importMessage}
+                  </div>
+                )}
               </div>
 
-              <div className="mt-6">
-                <h4 className="font-medium mb-3">Supported Platforms</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {["Shopify", "WooCommerce", "Magento", "BigCommerce"].map((platform) => (
-                    <Badge key={platform} variant="outline" className="justify-center py-2">
-                      {platform}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

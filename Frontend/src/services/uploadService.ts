@@ -81,6 +81,32 @@ class UploadService {
     }
   }
 
+  async importFromAPI(apiEndpoint: string, apiKey: string): Promise<any> {
+    try {
+      const formData = new FormData();
+      formData.append('api_endpoint', apiEndpoint);
+      formData.append('api_key', apiKey);
+
+      const response = await fetch(`${API_BASE_URL}/data/import_from_api`, {
+        method: 'POST',
+        headers: {
+          ...authService.getAuthHeaders(),
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error importing from API:', error);
+      throw error;
+    }
+  }
+
   async validateCSVColumns(file: File): Promise<CSVValidationResponse> {
     try {
       const formData = new FormData();

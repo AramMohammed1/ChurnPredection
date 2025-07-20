@@ -2,6 +2,7 @@ import os
 import tempfile
 import pandas as pd
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
@@ -9,6 +10,8 @@ from ..database import engine, get_db
 from ..database.repositories import get_all_customers_from_db, get_customer, insert_csv_data_to_table, save_upload_history, get_user_upload_history
 from ..routers.auth import get_current_user
 from ..models import User
+import requests
+import json
 
 router = APIRouter(prefix="/data", tags=["data management"])
 
@@ -186,6 +189,99 @@ async def validate_csv_columns(file: UploadFile = File(...)):
                 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading CSV file: {str(e)}")
+
+@router.post("/import_from_api")
+async def import_from_api(
+    api_endpoint: str = Form(...),
+    api_key: str = Form(...),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Import data from external API and insert it into the user's database table
+    """
+    try:
+        # Validate API endpoint
+        if not api_endpoint.startswith(('http://', 'https://')):
+            raise HTTPException(status_code=400, detail="Invalid API endpoint URL")
+        
+        # Make request to external API
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        }
+        
+        try:
+            response = requests.get(api_endpoint, headers=headers, timeout=30)
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            raise HTTPException(status_code=400, detail=f"Failed to fetch data from API: {str(e)}")
+        
+        # Parse JSON response
+        try:
+            api_data = response.json()
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid JSON response from API")
+        
+        # Convert to DataFrame
+        if isinstance(api_data, list):
+            df = pd.DataFrame(api_data)
+        elif isinstance(api_data, dict) and 'data' in api_data:
+            df = pd.DataFrame(api_data['data'])
+        else:
+            raise HTTPException(status_code=400, detail="API response should be a list of records or contain a 'data' field")
+        
+        if df.empty:
+            raise HTTPException(status_code=400, detail="No data received from API")
+        
+        # Create temporary CSV file for processing
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
+            df.to_csv(temp_file.name, index=False)
+            temp_file_path = temp_file.name
+        
+        try:
+            table_name = f"user_data_{current_user.id}"
+            
+            # Insert the data into the database (no column mapping needed as API should handle this)
+            records_count = insert_csv_data_to_table(temp_file_path, table_name, engine, None)
+            
+            # Save successful import to history
+            save_upload_history(
+                user_id=current_user.id,
+                filename=f"API Import from {api_endpoint}",
+                table_name=table_name,
+                status="success",
+                file_size=len(response.content),
+                records_count=records_count
+            )
+            
+            return {
+                "message": "Data imported successfully from API",
+                "source": api_endpoint,
+                "table_name": table_name,
+                "records_count": records_count,
+                "size": len(response.content)
+            }
+            
+        except Exception as e:
+            # Save failed import to history
+            save_upload_history(
+                user_id=current_user.id,
+                filename=f"API Import from {api_endpoint}",
+                table_name=table_name,
+                status="error",
+                file_size=len(response.content),
+                error_message=str(e)
+            )
+            raise e
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+                
+    except Exception as e:
+        if not isinstance(e, HTTPException):
+            raise HTTPException(status_code=500, detail=f"Error importing data from API: {str(e)}")
+        raise e
 
 @router.get("/customers")
 async def get_customers(current_user: User = Depends(get_current_user)):
