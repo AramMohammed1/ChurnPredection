@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +16,11 @@ import {
   Link,
   RefreshCw,
   X,
-  Settings
+  Settings,
+  Clock,
+  FileUp
 } from "lucide-react";
-import { uploadService, UploadProgress, ColumnMapping, CSVValidationResponse } from "@/services/uploadService";
+import { uploadService, UploadProgress, ColumnMapping, CSVValidationResponse, UploadHistoryEntry } from "@/services/uploadService";
 import { ColumnMappingModal } from "@/components/ColumnMappingModal";
 
 export const DataImport = () => {
@@ -34,6 +36,75 @@ export const DataImport = () => {
   const [csvColumns, setCsvColumns] = useState<string[]>([]);
   const [columnMapping, setColumnMapping] = useState<ColumnMapping | null>(null);
   const [tableName, setTableName] = useState("");
+  const [uploadHistory, setUploadHistory] = useState<UploadHistoryEntry[]>([]);
+
+  // Load upload history on component mount
+  useEffect(() => {
+    const loadUploadHistory = async () => {
+      try {
+        const history = await uploadService.getUploadHistory();
+        console.log('Upload history received:', history); // Debug log
+        setUploadHistory(history);
+      } catch (error) {
+        console.error('Error loading upload history:', error);
+      }
+    };
+    
+    loadUploadHistory();
+  }, []);
+
+  const formatTimeAgo = (dateString: string): string => {
+    console.log('formatTimeAgo called with:', dateString); // Debug log
+    
+    if (!dateString) {
+      return 'Unknown';
+    }
+    
+    try {
+      const date = new Date(dateString);
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateString);
+        return 'Invalid date';
+      }
+      
+      const now = new Date();
+      const diffInMs = now.getTime() - date.getTime();
+      
+      // Handle future dates
+      if (diffInMs < 0) {
+        return 'Just now';
+      }
+      
+      const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+      const diffInDays = Math.floor(diffInHours / 24);
+
+      if (diffInDays > 0) {
+        return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+      } else if (diffInHours > 0) {
+        return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+      } else {
+        const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+        if (diffInMinutes > 0) {
+          return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+        } else {
+          return 'Just now';
+        }
+      }
+    } catch (error) {
+      console.error('Error formatting time ago:', error, 'Date string:', dateString);
+      return 'Error';
+    }
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -90,9 +161,17 @@ export const DataImport = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+      
+      // Refresh upload history after successful upload
+      const history = await uploadService.getUploadHistory();
+      setUploadHistory(history);
     } catch (error) {
       setUploadStatus('error');
       setUploadMessage(error instanceof Error ? error.message : "Upload failed");
+      
+      // Refresh upload history after failed upload
+      const history = await uploadService.getUploadHistory();
+      setUploadHistory(history);
     } finally {
       setIsUploading(false);
     }
@@ -144,27 +223,6 @@ export const DataImport = () => {
       fileInputRef.current.value = '';
     }
   };
-
-  const dataSources = [
-    {
-      name: "Customer Data",
-      status: "connected",
-      lastSync: "2 hours ago",
-      records: "14,892"
-    },
-    {
-      name: "Order History", 
-      status: "connected",
-      lastSync: "1 hour ago",
-      records: "47,123"
-    },
-    {
-      name: "Product Catalog",
-      status: "disconnected",
-      lastSync: "Never",
-      records: "0"
-    }
-  ];
 
   return (
     <div className="space-y-6">
@@ -390,46 +448,63 @@ export const DataImport = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="w-5 h-5" />
-                Data Source Status
+                Upload History
               </CardTitle>
               <CardDescription>
-                Monitor your connected data sources and sync status
+                Track your data upload history and monitor sync status
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {dataSources.map((source) => (
-                  <div key={source.name} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        {source.status === "connected" ? (
-                          <CheckCircle className="w-5 h-5 text-green-500" />
-                        ) : (
-                          <AlertCircle className="w-5 h-5 text-red-500" />
-                        )}
-                        <div>
-                          <h4 className="font-medium">{source.name}</h4>
-                          <p className="text-sm text-slate-500">
-                            Last sync: {source.lastSync}
-                          </p>
+              {uploadHistory.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <FileUp className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                  <p>No upload history found</p>
+                  <p className="text-sm">Upload your first CSV file to see history here</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {uploadHistory.map((entry) => (
+                    <div key={entry.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          {entry.status === "success" ? (
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <AlertCircle className="w-5 h-5 text-red-500" />
+                          )}
+                          <div>
+                            <h4 className="font-medium">{entry.filename}</h4>
+                            <div className="flex items-center gap-4 text-sm text-slate-500">
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {formatTimeAgo(entry.uploadTime)}
+                              </span>
+                              <span>Size: {formatFileSize(entry.fileSize)}</span>
+                            </div>
+                            {entry.errorMessage && (
+                              <p className="text-xs text-red-600 mt-1">{entry.errorMessage}</p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className="text-sm font-medium">{source.records}</div>
-                        <div className="text-xs text-slate-500">records</div>
+                      
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className="text-sm font-medium">
+                            {entry.recordsCount ? entry.recordsCount.toLocaleString() : '0'}
+                          </div>
+                          <div className="text-xs text-slate-500">records</div>
+                        </div>
+                        <Badge 
+                          variant={entry.status === "success" ? "default" : "destructive"}
+                        >
+                          {entry.status.toLocaleUpperCase()}
+                        </Badge>
                       </div>
-                      <Badge 
-                        variant={source.status === "connected" ? "default" : "destructive"}
-                      >
-                        {source.status}
-                      </Badge>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,10 +1,12 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { authService } from './authService';
 
 export interface UploadResponse {
   message: string;
   filename: string;
   table_name: string;
   size: number;
+  records_count: number;
 }
 
 export interface UploadProgress {
@@ -41,13 +43,42 @@ export interface RequiredColumn {
   description: string;
 }
 
+export interface UploadHistoryEntry {
+  id: string;
+  filename: string;
+  tableName: string;
+  uploadTime: string;
+  status: 'success' | 'error';
+  fileSize: number;
+  recordsCount?: number;
+  errorMessage?: string;
+}
+
 class UploadService {
   private getHeaders(): HeadersInit {
-    const token = localStorage.getItem('access_token');
+    const authHeaders = authService.getAuthHeaders();
     return {
-      'Content-Type': 'multipart/form-data',
-      ...(token && { 'Authorization': `Bearer ${token}` })
+      'Content-Type': 'application/json',
+      ...authHeaders,
     };
+  }
+
+  async getUploadHistory(limit: number = 50): Promise<UploadHistoryEntry[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/data/upload_history?limit=${limit}`, {
+        headers: this.getHeaders(),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.upload_history || [];
+    } catch (error) {
+      console.error('Error fetching upload history:', error);
+      return [];
+    }
   }
 
   async validateCSVColumns(file: File): Promise<CSVValidationResponse> {

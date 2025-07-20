@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from ..database import engine, get_db
-from ..database.repositories import get_all_customers_from_db, get_customer, insert_csv_data_to_table
+from ..database.repositories import get_all_customers_from_db, get_customer, insert_csv_data_to_table, save_upload_history, get_user_upload_history
 from ..routers.auth import get_current_user
 from ..models import User
 
@@ -102,13 +102,36 @@ async def upload_csv(
         try:
             table_name = f"user_data_{current_user.id}"
             # Insert the CSV data into the database with column mapping
-            insert_csv_data_to_table(temp_file_path, table_name, engine, column_mapping)
+            records_count = insert_csv_data_to_table(temp_file_path, table_name, engine, column_mapping)
+            
+            # Save successful upload to history
+            save_upload_history(
+                user_id=current_user.id,
+                filename=file.filename,
+                table_name=table_name,
+                status="success",
+                file_size=len(content),
+                records_count=records_count
+            )
+            
             return {
                 "message": "CSV file uploaded and processed successfully",
                 "filename": file.filename,
                 "table_name": table_name,
-                "size": len(content)
+                "size": len(content),
+                "records_count": records_count
             }
+        except Exception as e:
+            # Save failed upload to history
+            save_upload_history(
+                user_id=current_user.id,
+                filename=file.filename,
+                table_name=table_name,
+                status="error",
+                file_size=len(content),
+                error_message=str(e)
+            )
+            raise e
         finally:
             # Clean up the temporary file
             if os.path.exists(temp_file_path):
@@ -116,6 +139,20 @@ async def upload_csv(
                 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing CSV file: {str(e)}")
+
+@router.get("/upload_history")
+async def get_upload_history(
+    current_user: User = Depends(get_current_user),
+    limit: int = 5
+):
+    """
+    Get upload history for the current user
+    """
+    try:
+        history = get_user_upload_history(current_user.id, limit)
+        return {"upload_history": history}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving upload history: {str(e)}")
 
 @router.post("/validate_csv_columns")
 async def validate_csv_columns(file: UploadFile = File(...)):

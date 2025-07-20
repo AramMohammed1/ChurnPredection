@@ -80,6 +80,11 @@ class AuthService {
     const tokens = await response.json();
     this.saveTokensToStorage(tokens);
     this.setupTokenRefresh();
+    // Fetch and store user info
+    const user = await this.getCurrentUser();
+    if (user) {
+      localStorage.setItem('current_user', JSON.stringify(user));
+    }
     return tokens;
   }
 
@@ -104,6 +109,11 @@ class AuthService {
     const tokens = await response.json();
     this.saveTokensToStorage(tokens);
     this.setupTokenRefresh();
+    // Fetch and store user info
+    const user = await this.getCurrentUser();
+    if (user) {
+      localStorage.setItem('current_user', JSON.stringify(user));
+    }
     return tokens;
   }
 
@@ -176,7 +186,7 @@ class AuthService {
     localStorage.removeItem("churnPredictionData");
     localStorage.removeItem("churnPredictionCustomers");
     localStorage.removeItem("churnPredictionExpiry");
-    
+    localStorage.removeItem("current_user");
     if (this.refreshTimeout) {
       clearTimeout(this.refreshTimeout);
       this.refreshTimeout = null;

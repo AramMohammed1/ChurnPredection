@@ -17,6 +17,19 @@ class User(Base):
     is_deleted = Column(Boolean, default=False)
 
 
+class UploadHistory(Base):
+    __tablename__ = "upload_history"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    filename = Column(String, nullable=False)
+    table_name = Column(String, nullable=False)
+    upload_time = Column(DateTime, default=datetime.utcnow)
+    status = Column(String, nullable=False)  # 'success' or 'error'
+    file_size = Column(Integer, nullable=False)
+    records_count = Column(Integer, nullable=True)
+    error_message = Column(String, nullable=True)
+
+
 
 def create_table_from_csv(csv_file_path, table_name, engine):
     """
