@@ -186,11 +186,6 @@ def load_model():
             model.load_state_dict(state_dict)
             model.eval()
         
-        print(f"Model loaded successfully!")
-        print(f"Sequence length: {seq_length}")
-        print(f"Features per time step: {num_features}")
-        print(f"Total input features: {seq_length * num_features}")
-        
     except Exception as e:
         print(f"Error loading model: {e}")
         raise

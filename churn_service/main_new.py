@@ -24,7 +24,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router)
 app.include_router(data.router)
-app.include_router(churn.router)
+app.include_router(churn.router )
 
 @app.on_event("startup")
 async def startup_event():
@@ -44,9 +44,9 @@ async def root():
         "version": "1.0.0",
         "status": "running",
         "endpoints": {
-            "authentication": "/auth",
-            "data_management": "/data", 
-            "churn_prediction": "/churn"
+            "authentication": "/api/v1/auth",
+            "data_management": "/api/v1/data", 
+            "churn_prediction": "/api/v1/churn"
         }
     }
 
@@ -56,4 +56,4 @@ async def health_check():
     return {
         "status": "healthy",
         "timestamp": "2024-01-01T00:00:00Z"
-    }
+    } 

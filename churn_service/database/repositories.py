@@ -8,11 +8,19 @@ import numpy as np
 from fastapi import HTTPException
 from .. import churn_service
 from ..churn_service import ChurnPredictionResponse
+from ..models import UploadHistory
+from datetime import datetime
 
 
 
 def get_customer (customer_id: int, table_name: str)->pd.DataFrame:
     """Get specific customer by ID"""
+    # Convert numpy types to Python native types
+    try:
+        customer_id = int(customer_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail=f"Invalid customer_id: {customer_id}")
+    
     query = f"SELECT * FROM {table_name} WHERE \"Customer ID\" = %(customer_id)s"
     df = pd.read_sql(query, engine, params={"customer_id": customer_id, "table_name": table_name})
     if df.empty:
@@ -29,7 +37,7 @@ def get_all_customers_from_db(table_name:str)->pd.DataFrame:
 
 def insert_csv_data_to_table(csv_file_path, table_name, engine, column_mapping=None):
     """ 
-    Insert CSV data into the created table with optional column mapping
+    Insert CSV data into the specified table (now used for per-user tables)
     """
     # Read CSV file
     data = pd.read_csv(csv_file_path, low_memory=False)
@@ -86,6 +94,58 @@ def insert_csv_data_to_table(csv_file_path, table_name, engine, column_mapping=N
 
     # Insert data into table
     data.to_sql(table_name, engine, if_exists='replace', index=False)
-    
     print(f"Data inserted into table '{table_name}' successfully!")
+    return len(data)
+    
+def save_upload_history(user_id: int, filename: str, table_name: str, status: str, file_size: int, records_count: int = None, error_message: str = None):
+    """Save upload history to database"""
+    try:
+        db = next(get_db())
+        upload_entry = UploadHistory(
+            user_id=user_id,
+            filename=filename,
+            table_name=table_name,
+            upload_time=datetime.now(),  # Use local time instead of UTC
+            status=status,
+            file_size=file_size,
+            records_count=records_count,
+            error_message=error_message
+        )
+        db.add(upload_entry)
+        db.commit()
+        db.refresh(upload_entry)
+        return upload_entry
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error saving upload history: {str(e)}")
+    finally:
+        db.close()
+
+def get_user_upload_history(user_id: int, limit: int = 50):
+    """Get upload history for a specific user"""
+    try:
+        db = next(get_db())
+        history = db.query(UploadHistory).filter(
+            UploadHistory.user_id == user_id
+        ).order_by(
+            UploadHistory.upload_time.desc()
+        ).limit(limit).all()
+        
+        return [
+            {
+                "id": str(entry.id),
+                "filename": entry.filename,
+                "tableName": entry.table_name,
+                "uploadTime": entry.upload_time.isoformat(),
+                "status": entry.status,
+                "fileSize": entry.file_size,
+                "recordsCount": entry.records_count,
+                "errorMessage": entry.error_message
+            }
+            for entry in history
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving upload history: {str(e)}")
+    finally:
+        db.close()
     

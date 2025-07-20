@@ -1,10 +1,12 @@
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { authService } from './authService';
 
 export interface UploadResponse {
   message: string;
   filename: string;
   table_name: string;
   size: number;
+  records_count: number;
 }
 
 export interface UploadProgress {
@@ -41,13 +43,68 @@ export interface RequiredColumn {
   description: string;
 }
 
+export interface UploadHistoryEntry {
+  id: string;
+  filename: string;
+  tableName: string;
+  uploadTime: string;
+  status: 'success' | 'error';
+  fileSize: number;
+  recordsCount?: number;
+  errorMessage?: string;
+}
+
 class UploadService {
   private getHeaders(): HeadersInit {
-    const token = localStorage.getItem('access_token');
+    const authHeaders = authService.getAuthHeaders();
     return {
-      'Content-Type': 'multipart/form-data',
-      ...(token && { 'Authorization': `Bearer ${token}` })
+      'Content-Type': 'application/json',
+      ...authHeaders,
     };
+  }
+
+  async getUploadHistory(limit: number = 50): Promise<UploadHistoryEntry[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/data/upload_history?limit=${limit}`, {
+        headers: this.getHeaders(),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.upload_history || [];
+    } catch (error) {
+      console.error('Error fetching upload history:', error);
+      return [];
+    }
+  }
+
+  async importFromAPI(apiEndpoint: string, apiKey: string): Promise<any> {
+    try {
+      const formData = new FormData();
+      formData.append('api_endpoint', apiEndpoint);
+      formData.append('api_key', apiKey);
+
+      const response = await fetch(`${API_BASE_URL}/data/import_from_api`, {
+        method: 'POST',
+        headers: {
+          ...authService.getAuthHeaders(),
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error importing from API:', error);
+      throw error;
+    }
   }
 
   async validateCSVColumns(file: File): Promise<CSVValidationResponse> {
@@ -55,7 +112,7 @@ class UploadService {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`${API_BASE_URL}/validate_csv_columns`, {
+      const response = await fetch(`${API_BASE_URL}/data/validate_csv_columns`, {
         method: 'POST',
         body: formData,
       });
@@ -72,11 +129,11 @@ class UploadService {
   }
 
   async uploadCSV(
-    file: File, 
-    tableName: string = 'ecommerce', 
-    columnMapping?: ColumnMapping,
+    file: File,
+    tableName: string,
+    columnMapping: ColumnMapping | null,
     onProgress?: (progress: UploadProgress) => void
-  ): Promise<UploadResponse> {
+  ): Promise<any> {
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -117,7 +174,7 @@ class UploadService {
           reject(new Error('Network error during upload'));
         });
 
-        xhr.open('POST', `${API_BASE_URL}/upload_csv`);
+        xhr.open('POST', `${API_BASE_URL}/data/upload_csv`);
         
         // Set headers manually for FormData
         const token = localStorage.getItem('access_token');

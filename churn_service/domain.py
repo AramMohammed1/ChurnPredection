@@ -13,6 +13,10 @@ from .churn_service import ChurnPredictionResponse
 
 def get_customer_sequence_scaled(customer_id, table_name):
     numerical_cols =['Product Price', 'Quantity','Total Purchase Amount', 'Returns', 'Age', 'Year', 'Month', 'Day','Gender_Male', 'Payment Method_Credit Card', 'Payment Method_PayPal', 'Product Category_Clothing','Product Category_Electronics', 'Product Category_Home']
+    # Convert numpy.int64 to Python int if needed
+    if hasattr(customer_id, 'item'):
+        customer_id = customer_id.item()
+    
     df = get_customer(customer_id,table_name)
     sequences = []
     labels = []
@@ -91,6 +95,8 @@ def predict_churned_customers(table_name):
     predictions = {}
     sum = 0
     for customer_id in df['Customer ID']:
+        # Convert numpy.int64 to Python int
+        customer_id = int(customer_id)
         result, label = predict_churn(customer_id, table_name)
         predictions[customer_id] = {
             "prediction": result,
@@ -112,6 +118,8 @@ def get_all_customer_sequences_scaled(table_name):
     features = numerical_cols
     all_sequences = {}
     for customer_id, customer_data in df.groupby('Customer ID'):
+        # Convert numpy.int64 to Python int
+        customer_id = int(customer_id)
         customer_data = customer_data.sort_values(by='Purchase Date')
         sequences = []
         labels = []

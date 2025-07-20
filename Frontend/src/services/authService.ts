@@ -64,7 +64,7 @@ class AuthService {
     formData.append("username", username);
     formData.append("password", password);
 
-    const response = await fetch(`${API_BASE}/login`, {
+    const response = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -80,11 +80,16 @@ class AuthService {
     const tokens = await response.json();
     this.saveTokensToStorage(tokens);
     this.setupTokenRefresh();
+    // Fetch and store user info
+    const user = await this.getCurrentUser();
+    if (user) {
+      localStorage.setItem('current_user', JSON.stringify(user));
+    }
     return tokens;
   }
 
   async register(username: string, email: string, password: string): Promise<AuthTokens> {
-    const response = await fetch(`${API_BASE}/register`, {
+    const response = await fetch(`${API_BASE}/auth/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -104,6 +109,11 @@ class AuthService {
     const tokens = await response.json();
     this.saveTokensToStorage(tokens);
     this.setupTokenRefresh();
+    // Fetch and store user info
+    const user = await this.getCurrentUser();
+    if (user) {
+      localStorage.setItem('current_user', JSON.stringify(user));
+    }
     return tokens;
   }
 
@@ -112,7 +122,7 @@ class AuthService {
       throw new Error("No refresh token available");
     }
 
-    const response = await fetch(`${API_BASE}/refresh`, {
+    const response = await fetch(`${API_BASE}/auth/refresh`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -139,7 +149,7 @@ class AuthService {
     }
 
     try {
-      const response = await fetch(`${API_BASE}/me`, {
+      const response = await fetch(`${API_BASE}/auth/me`, {
         headers: {
           Authorization: `Bearer ${this.accessToken}`,
         },
@@ -176,7 +186,7 @@ class AuthService {
     localStorage.removeItem("churnPredictionData");
     localStorage.removeItem("churnPredictionCustomers");
     localStorage.removeItem("churnPredictionExpiry");
-    
+    localStorage.removeItem("current_user");
     if (this.refreshTimeout) {
       clearTimeout(this.refreshTimeout);
       this.refreshTimeout = null;
