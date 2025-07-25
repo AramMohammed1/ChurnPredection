@@ -100,41 +100,6 @@ class ChurnModel(nn.Module):
         output = self.output_layer(x)
         return torch.sigmoid(output)
 
-# Input model for API validation - based on the actual features from working.ipynb
-class ChurnPredictionInput(BaseModel):
-    customer_id: Optional[int] = None
-    
-    # Sequence of customer behavior data (10 time steps)
-    # Each time step contains these 14 features:
-    # ['Product Price', 'Quantity', 'Total Purchase Amount', 'Returns', 'Age', 
-    #  'Year', 'Month', 'Day', 'Gender_Male', 'Payment Method_Credit Card', 
-    #  'Payment Method_PayPal', 'Product Category_Clothing', 'Product Category_Electronics', 'Product Category_Home']
-    
-    # For simplicity, we'll accept a flattened sequence (140 features total)
-    # Users can provide either individual features or the full sequence
-    sequence_data: Optional[List[float]] = None  # 140 features (10 * 14)
-    
-    # Individual features for single time step (if not providing sequence)
-    product_price: Optional[float] = None
-    quantity: Optional[int] = None
-    total_purchase_amount: Optional[float] = None
-    returns: Optional[float] = None
-    age: Optional[int] = None
-    year: Optional[int] = None
-    month: Optional[int] = None
-    day: Optional[int] = None
-    gender_male: Optional[int] = None
-    payment_method_credit_card: Optional[int] = None
-    payment_method_paypal: Optional[int] = None
-    product_category_clothing: Optional[int] = None
-    product_category_electronics: Optional[int] = None
-    product_category_home: Optional[int] = None
-
-class ChurnPredictionResponse(BaseModel):
-    customer_id: Optional[int]
-    churn_probability: float
-    churn_prediction: bool
-    confidence: str
 
 
 
@@ -155,7 +120,7 @@ def load_model():
     global model, scaler
         # Try to load the scaler if it was saved
     try:
-        scaler = joblib.load("churn_service\\scaler.pkl")
+        scaler = joblib.load("services\\churn_service\\utils\\scaler.pkl")
         print(scaler)
         print("Scaler loaded successfully!")
         
@@ -165,7 +130,7 @@ def load_model():
 
     try:
         # Load the model state
-        checkpoint = torch.load('churn_service\\best_model.pth', map_location=torch.device('cpu'))
+        checkpoint = torch.load('services\\churn_service\\utils\\best_model.pth', map_location=torch.device('cpu'))
         
         # Extract model parameters
         if 'model_state_dict' in checkpoint:

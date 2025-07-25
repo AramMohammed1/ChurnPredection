@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
 export interface ChurnPredictionResponse {
   customer_id: number;
@@ -64,6 +64,7 @@ class ChurnService {
   }
 
   async getChurnedCustomers(tableName: string = ''): Promise<ChurnData> {
+
     try {
       const response = await fetch(`${API_BASE_URL}/churn/churned_customers?table_name=${tableName}`, {
         headers: this.getHeaders(),
