@@ -1,18 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import Optional
-from ..models import User
+from ..models.auth import UserCreate, UserLogin, Token, RefreshTokenRequest
+from ..models.user import User
 from ..database import get_db
-from ..auth_utils import (
-    hash_password, 
-    verify_password, 
-    create_access_token, 
-    create_refresh_token, 
-    decode_access_token, 
-    decode_refresh_token
-)
+from ..auth_utils import *
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -20,22 +12,6 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 # Pydantic models
-class UserCreate(BaseModel):
-    username: str
-    email: str
-    password: str
-
-class UserLogin(BaseModel):
-    username: str
-    password: str
-
-class Token(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str
-
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str
 
 # Dependency to get current user
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):

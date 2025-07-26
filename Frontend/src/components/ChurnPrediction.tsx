@@ -18,7 +18,11 @@ interface ChurnCustomer {
   customerId: number;
 }
 
-export const ChurnPrediction = () => {
+interface ChurnPredictionProps {
+  onSessionEnd?: () => void;
+}
+
+export const ChurnPrediction = ({ onSessionEnd }: ChurnPredictionProps) => {
   const [churnData, setChurnData] = useState<ChurnData | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +36,21 @@ export const ChurnPrediction = () => {
   const CUSTOMER_CACHE_KEY = "churnPredictionCustomers";
   const CACHE_EXPIRY_KEY = "churnPredictionExpiry";
   const CACHE_DURATION = 60 * 60 * 1000;
+
+  // Listen for session end (logout) and cleanup polling
+  useEffect(() => {
+    if (!onSessionEnd) return;
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        setPollInterval(null);
+      }
+      setTaskId(null);
+      setProgress(null);
+      setChurnData(null);
+      setCustomers([]);
+    };
+  }, [onSessionEnd, pollInterval]);
 
   useEffect(() => {
     const cachedChurn = localStorage.getItem(CHURN_CACHE_KEY);
@@ -65,7 +84,7 @@ export const ChurnPrediction = () => {
           try {
             const progressData = await churnService.getProgress(taskResponse.task_id);
             setProgress(progressData);
-            
+
             if (progressData.status === 'done' && progressData.result) {
               clearInterval(interval);
               setPollInterval(null);
@@ -73,6 +92,7 @@ export const ChurnPrediction = () => {
               
               // Fetch all customer details in one call
               const user = await authService.getCurrentUser();
+              console.log("occored one time")
               const allCustomers = await churnService.getAllCustomers(`user_data_${user.id}`);
               setCustomers(allCustomers);
 
@@ -97,7 +117,7 @@ export const ChurnPrediction = () => {
                 return;
               }
               else{
-                setError(progressData.error || 'Prediction failed');
+                setError(progressData.error || 'Prediction failed 17');
                 setLoading(false);
               }
             }

@@ -1,14 +1,7 @@
 import pandas as pd
-from sqlalchemy.orm import Session
-import torch
-from sqlalchemy import text
 from . import get_db,engine
-import joblib
-import numpy as np
 from fastapi import HTTPException
-from .. import churn_service
-from ..churn_service import ChurnPredictionResponse
-from ..models import UploadHistory
+from ..models.uploadHistory import UploadHistory
 from datetime import datetime
 
 
@@ -33,6 +26,14 @@ def get_all_customers_from_db(table_name:str)->pd.DataFrame:
     if df.empty:
         raise HTTPException(status_code=404,detail=f"table {table_name} not found")
     return df
+
+
+def get_customers_in_batches_from_db(table_name: str, batch_size: int = 1000):
+    query = f"SELECT * FROM {table_name}"
+    for chunk in pd.read_sql(query, engine, chunksize=batch_size):
+        if chunk.empty:
+            break
+        yield chunk
 
 
 def insert_csv_data_to_table(csv_file_path, table_name, engine, column_mapping=None):
@@ -73,7 +74,7 @@ def insert_csv_data_to_table(csv_file_path, table_name, engine, column_mapping=N
     data['Year'] = data['Purchase Date'].dt.year
     data['Month'] = data['Purchase Date'].dt.month
     data['Day'] = data['Purchase Date'].dt.day
-    print("ok")
+    
 
     # Convert numeric columns to proper types
     data['Age'] = pd.to_numeric(data['Age'], errors='coerce').fillna(30)

@@ -1,52 +1,44 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from . import models
 from . import churn_service
-from .routers import auth, data, churn
-from .config import settings
+from .routers import churn
 
 # Create FastAPI app
-app = FastAPI(
-    title=settings.api_title,
-    description=settings.api_description,
-    version=settings.api_version
-)
+app = FastAPI()
 
-# Add CORS middleware
+# Allow all origins (for development) - MUST be before routers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(auth.router)
-app.include_router(data.router)
-app.include_router(churn.router )
+# Include routers AFTER CORS middleware
+app.include_router(churn.router)
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and load ML model on startup"""
-    from .database import engine
-    models.Base.metadata.create_all(bind=engine)
     churn_service.load_model()
     print("✅ Application started successfully!")
-    print("📊 Database tables created")
     print("🤖 ML model loaded")
+    print("🌐 CORS enabled for all origins")
 
 @app.get("/")
 async def root():
     """Root endpoint with API information"""
     return {
+        
         "message": "Churn Prediction API",
         "version": "1.0.0",
         "status": "running",
+        "cors": "enabled",
         "endpoints": {
-            "authentication": "/api/v1/auth",
-            "data_management": "/api/v1/data", 
-            "churn_prediction": "/api/v1/churn"
+            "authentication": "/auth",
+            "data_management": "/data", 
+            "churn_prediction": "/churn"
         }
     }
 
@@ -55,5 +47,12 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
+        "cors": "enabled",
         "timestamp": "2024-01-01T00:00:00Z"
-    } 
+    }
+
+# Add explicit OPTIONS handler for debugging
+@app.options("/{path:path}")
+async def options_handler(path: str):
+    """Handle OPTIONS requests for CORS preflight"""
+    return {"message": "CORS preflight handled"}

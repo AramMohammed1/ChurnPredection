@@ -225,7 +225,7 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="churn" className="mt-6">
-            <ChurnPrediction />
+            <ChurnPrediction key={isAuthenticated ? 'auth' : 'logout'} />
           </TabsContent>
 
           <TabsContent value="segments" className="mt-6">
