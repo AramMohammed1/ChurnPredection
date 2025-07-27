@@ -3,6 +3,7 @@ from . import get_db,engine
 from fastapi import HTTPException
 from ..models.uploadHistory import UploadHistory
 from datetime import datetime
+from sqlalchemy import Table, Column, Integer, Float, String, DateTime, MetaData
 
 
 
@@ -34,6 +35,30 @@ def get_customers_in_batches_from_db(table_name: str, batch_size: int = 1000):
         if chunk.empty:
             break
         yield chunk
+
+def create_user_prediction_table(user_id):
+
+    predictions_table_name = f"user_predictions_{user_id}"
+    metadata = MetaData()
+
+    # Define the table schema
+    predictions_table = Table(
+        predictions_table_name,
+        metadata,
+        Column("id", Integer, primary_key=True, autoincrement=True),
+        Column("customer_id", Integer, nullable=False),
+        Column("churn_probability", Float, nullable=False),
+        Column("confidince", Float, nullable=True),
+        Column("name", String(255), nullable=True),
+        Column("email", String(255), nullable=True),
+        Column("totalSpent", Float, nullable=True),
+        Column("last_purchase_date", DateTime, nullable=True),
+        extend_existing=True
+    )
+
+    # Create the table if it doesn't exist
+    if not engine.dialect.has_table(engine.connect(), predictions_table_name):
+        predictions_table.create(engine)
 
 
 def insert_csv_data_to_table(csv_file_path, table_name, engine, column_mapping=None):

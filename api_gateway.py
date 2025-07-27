@@ -18,6 +18,7 @@ SERVICE_MAP = {
     "auth": "http://localhost:8012",
     "data": "http://localhost:8011",
     "churn": "http://localhost:8013",
+    "segmentation": "http://localhost:8014",
 }
 
 @app.api_route("/{service}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
@@ -52,4 +53,4 @@ async def proxy(service: str, path: str, request: Request):
 
 @app.get("/")
 async def root():
-    return {"message": "API Gateway running. Use /auth, /data, /churn routes."} 
+    return {"message": "API Gateway running. Use /auth, /data, /churn, /segmentation routes."} 
