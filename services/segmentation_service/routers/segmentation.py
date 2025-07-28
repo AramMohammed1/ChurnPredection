@@ -24,9 +24,11 @@ async def segment_customers_endpoint(
     try:
         # Get access token from request headers
         access_token = request_obj.headers.get("Authorization", "").replace("Bearer ", "")
-        
+        user_id = current_user["id"]
+        table_name = f"user_data_{user_id}"
+
         # Fetch customer data from data service
-        customers = await get_all_customers(request.table_name, access_token)
+        customers = await get_all_customers(table_name, access_token)
         
         if not customers:
             raise HTTPException(status_code=404, detail="No customer data found")
@@ -68,10 +70,10 @@ async def get_segments(
     """
     try:
         # Get access token from request headers
-        print("hello")
-
+       
         access_token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        
+        user_id = current_user["id"]
+        table_name = f"user_data_{user_id}"
         # Fetch customer data from data service
         customers = await get_all_customers(table_name, access_token)
         
@@ -86,7 +88,7 @@ async def get_segments(
         
         # Get behavior analysis
         behavior_analysis = segmentation_service.get_segment_behavior_analysis(df)
-        
+
         return {
             "segments": segmentation_result["segments"],
             "behavior_analysis": behavior_analysis,
@@ -110,6 +112,8 @@ async def get_customer_segment(
         # Get access token from request headers
         access_token = request.headers.get("Authorization", "").replace("Bearer ", "")
         # Fetch customer data from data service
+        user_id = current_user["id"]
+        table_name = f"user_data_{user_id}"
         customers = await get_all_customers(table_name, access_token)
         
         if not customers:
@@ -152,7 +156,8 @@ async def get_behavior_analysis(
     try:
         # Get access token from request headers
         access_token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        
+        user_id = current_user["id"]
+        table_name = f"user_data_{user_id}"
         # Fetch customer data from data service
         customers = await get_all_customers(table_name, access_token)
         

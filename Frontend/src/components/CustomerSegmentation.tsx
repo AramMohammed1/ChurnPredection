@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
-import { Users, Crown, Star, Heart, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
+import { Users, Crown, Star, Heart, Shield, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { segmentationService, SegmentationResponse, SegmentInfo, BehaviorAnalysis } from "@/services/segmentationService";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,7 +20,9 @@ export const CustomerSegmentation = () => {
     "Loyal Customers": Heart,
     "Potential Loyalists": Star,
     "At Risk": AlertCircle,
-    "New Customers": Users
+    "New Customers": Users,
+    "Need Attention": Shield,
+
   };
 
   const loadSegmentationData = async () => {

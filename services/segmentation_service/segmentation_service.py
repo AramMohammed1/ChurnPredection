@@ -15,7 +15,8 @@ segment_names = {
     1: "Loyal Customers", 
     2: "Potential Loyalists",
     3: "At Risk",
-    4: "New Customers"
+    4: "New Customers",
+    5: "Need Attention"
 }
 
 segment_descriptions = {
@@ -23,15 +24,17 @@ segment_descriptions = {
     1: "Regular purchasers with good engagement",
     2: "Recent customers with potential for growth",
     3: "Declining engagement, at risk of churning",
-    4: "Recent first-time buyers"
+    4: "Recent first-time buyers",
+    5: "Customers with bad engagmement"
 }
 
 segment_colors = {
     0: "#10B981",  # Green
     1: "#3B82F6",  # Blue
     2: "#8B5CF6",  # Purple
-    3: "#F59E0B",  # Orange
-    4: "#06B6D4"   # Cyan
+    3: "#F44336",  # Red
+    4: "#06B6D4",  # Cyan
+    5: "#F59E0B",  # Orange
 }
 
 def load_model():
@@ -47,24 +50,24 @@ def load_model():
         model_path = os.path.join(utils_dir, "kmeans.pkl")
         if os.path.exists(model_path):
             model = joblib.load(model_path)
-            print(f"✅ K-means model loaded from {model_path}")
+            print(f"K-means model loaded from {model_path}")
         else:
-            print(f"❌ Model file not found at {model_path}")
+            print(f"Model file not found at {model_path}")
             return False
         
         # Load the scaler
         scaler_path = os.path.join(utils_dir, "scaler.pkl")
         if os.path.exists(scaler_path):
             scaler = joblib.load(scaler_path)
-            print(f"✅ Scaler loaded from {scaler_path}")
+            print(f"Scaler loaded from {scaler_path}")
         else:
-            print(f"❌ Scaler file not found at {scaler_path}")
+            print(f"Scaler file not found at {scaler_path}")
             return False
             
         return True
         
     except Exception as e:
-        print(f"❌ Error loading model: {str(e)}")
+        print(f"Error loading model: {str(e)}")
         return False
 
 def prepare_features(customer_data: pd.DataFrame) -> np.ndarray:
@@ -111,7 +114,7 @@ def segment_customers(customer_data: pd.DataFrame) -> Dict[str, Any]:
     segment_stats = {}
     total_customers = len(customer_data)
     
-    for segment_id in range(5):  # Assuming 5 segments
+    for segment_id in range(len(segment_names)):
         segment_customers = customer_data[customer_data['segment'] == segment_id]
         count = len(segment_customers)
         
