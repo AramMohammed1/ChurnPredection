@@ -1,73 +1,129 @@
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
-import { Users, Crown, Star, Heart, AlertCircle } from "lucide-react";
+import { Users, Crown, Star, Heart, Shield, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
+import { segmentationService, SegmentationResponse, SegmentInfo, BehaviorAnalysis } from "@/services/segmentationService";
+import { useToast } from "@/hooks/use-toast";
 
 export const CustomerSegmentation = () => {
-  const segments = [
-    {
-      name: "Champions",
-      count: 1247,
-      percentage: 12.4,
-      color: "#10B981",
-      icon: Crown,
-      description: "High value, highly engaged",
-      avgSpent: "$2,340",
-      frequency: "Weekly"
-    },
-    {
-      name: "Loyal Customers", 
-      count: 2891,
-      percentage: 28.7,
-      color: "#3B82F6",
-      icon: Heart,
-      description: "Regular purchasers",
-      avgSpent: "$1,580",
-      frequency: "Bi-weekly"
-    },
-    {
-      name: "Potential Loyalists",
-      count: 3456,
-      percentage: 34.2,
-      color: "#8B5CF6",
-      icon: Star,
-      description: "Recent customers with potential",
-      avgSpent: "$890",
-      frequency: "Monthly"
-    },
-    {
-      name: "At Risk",
-      count: 1234,
-      percentage: 12.2,
-      color: "#F59E0B",
-      icon: AlertCircle,
-      description: "Declining engagement",
-      avgSpent: "$1,200",
-      frequency: "Quarterly"
-    },
-    {
-      name: "New Customers",
-      count: 1278,
-      percentage: 12.5,
-      color: "#06B6D4",
-      icon: Users,
-      description: "Recent first-time buyers",
-      avgSpent: "$450", 
-      frequency: "One-time"
-    }
-  ];
+  const [segmentationData, setSegmentationData] = useState<SegmentationResponse | null>(null);
+  const [behaviorData, setBehaviorData] = useState<BehaviorAnalysis[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [tableName, setTableName] = useState("customer_data"); // Default table name
+  const { toast } = useToast();
 
-  const behaviorData = [
-    { segment: "Champions", purchases: 24, engagement: 95, satisfaction: 92 },
-    { segment: "Loyal", purchases: 18, engagement: 85, satisfaction: 88 },
-    { segment: "Potential", purchases: 8, engagement: 65, satisfaction: 78 },
-    { segment: "At Risk", purchases: 3, engagement: 35, satisfaction: 65 },
-    { segment: "New", purchases: 2, engagement: 75, satisfaction: 82 }
-  ];
+  const segmentIcons = {
+    "Champions": Crown,
+    "Loyal Customers": Heart,
+    "Potential Loyalists": Star,
+    "At Risk": AlertCircle,
+    "New Customers": Users,
+    "Need Attention": Shield,
+
+  };
+
+  const loadSegmentationData = async () => {
+    setLoading(true);
+    try {
+      const data = await segmentationService.getSegments(tableName);
+      setSegmentationData(data);
+      setBehaviorData(data.behavior_analysis);
+      toast({
+        title: "Segmentation loaded",
+        description: "Customer segments have been successfully loaded.",
+      });
+    } catch (error) {
+      console.error('Error loading segmentation data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load segmentation data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSegmentationData();
+  }, [tableName]);
+
+  const handleRefresh = () => {
+    loadSegmentationData();
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-6 h-6 animate-spin" />
+            <span>Loading segmentation data...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!segmentationData) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">No segmentation data available</p>
+              <Button onClick={handleRefresh} className="mt-4">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Convert segments object to array for pie chart
+  const segmentsArray = Object.values(segmentationData.segments).map((segment: SegmentInfo) => ({
+    name: segment.name,
+    count: segment.count,
+    percentage: segment.percentage,
+    color: segment.color,
+    icon: segmentIcons[segment.name as keyof typeof segmentIcons] || Users,
+    description: segment.description,
+    avgSpent: segment.avg_spent,
+    frequency: getPurchaseFrequency(segment.avg_spent, segment.count)
+  }));
+
+  function getPurchaseFrequency(avgSpent: number, count: number): string {
+    if (avgSpent > 2000) return "Weekly";
+    if (avgSpent > 1000) return "Bi-weekly";
+    if (avgSpent > 500) return "Monthly";
+    if (avgSpent > 200) return "Quarterly";
+    return "One-time";
+  }
 
   return (
     <div className="space-y-6">
+      {/* Header with refresh button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Customer Segmentation</h2>
+          <p className="text-muted-foreground">AI-powered customer segmentation analysis</p>
+        </div>
+        <Button onClick={handleRefresh} disabled={loading}>
+          {loading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          Refresh
+        </Button>
+      </div>
+
       {/* Segment Overview */}
       <div className="grid lg:grid-cols-2 gap-6">
         <Card>
@@ -80,7 +136,7 @@ export const CustomerSegmentation = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={segments}
+                    data={segmentsArray}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -88,7 +144,7 @@ export const CustomerSegmentation = () => {
                     paddingAngle={2}
                     dataKey="percentage"
                   >
-                    {segments.map((entry, index) => (
+                    {segmentsArray.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -129,7 +185,7 @@ export const CustomerSegmentation = () => {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4">
-            {segments.map((segment) => (
+            {segmentsArray.map((segment) => (
               <div key={segment.name} className="p-4 border rounded-lg hover:bg-slate-50 transition-colors">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -156,7 +212,7 @@ export const CustomerSegmentation = () => {
                   </div>
                   <div>
                     <span className="text-slate-500">Avg. Spent:</span>
-                    <div className="font-medium">{segment.avgSpent}</div>
+                    <div className="font-medium">${segment.avgSpent.toLocaleString()}</div>
                   </div>
                   <div>
                     <span className="text-slate-500">Purchase Frequency:</span>

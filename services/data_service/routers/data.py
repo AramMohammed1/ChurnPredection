@@ -4,7 +4,7 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 from typing import Optional
 from ..database import engine
-from ..database.repositories import get_all_customers_from_db, get_customer, insert_csv_data_to_table, save_upload_history, get_user_upload_history, get_customers_in_batches_from_db
+from ..database.repositories import get_all_customers_from_db, get_customer, insert_csv_data_to_table, save_upload_history, get_user_upload_history, get_customers_in_batches_from_db,create_user_prediction_table
 from ..models.ColumnMapping import ColumnMapping
 import requests
 import json
@@ -59,7 +59,7 @@ async def upload_csv(
             table_name = f"user_data_{user_id}"
             # Insert the CSV data into the database with column mapping
             records_count = insert_csv_data_to_table(temp_file_path, table_name, engine, column_mapping)
-
+            create_user_prediction_table(user_id)   
             # Save successful upload to history
             try:
                 save_upload_history(
