@@ -2,8 +2,13 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 import httpx
 from fastapi.middleware.cors import CORSMiddleware
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="API Gateway")
+
 
 # Allow all origins (for development)
 app.add_middleware(
@@ -15,10 +20,11 @@ app.add_middleware(
 )
 
 SERVICE_MAP = {
-    "auth": "http://localhost:8012",
-    "data": "http://localhost:8011",
-    "churn": "http://localhost:8013",
-    "segmentation": "http://localhost:8014",
+    "auth": os.getenv("AUTH_SERVICE_BASE_URL"),
+    "data": os.getenv("DATA_SERVICE_BASE_URL"),
+    "churn": os.getenv("CHURN_SERVICE_BASE_URL"),
+    "segmentation": os.getenv("SEGMENTATION_SERVICE_BASE_URL"),
+    "cltv": os.getenv("CLTV_SERVICE_BASE_URL"),
 }
 
 @app.api_route("/{service}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
@@ -53,4 +59,4 @@ async def proxy(service: str, path: str, request: Request):
 
 @app.get("/")
 async def root():
-    return {"message": "API Gateway running. Use /auth, /data, /churn, /segmentation routes."} 
+    return {"message": "API Gateway running. Use /auth, /data, /churn, /segmentation, /cltv routes."} 

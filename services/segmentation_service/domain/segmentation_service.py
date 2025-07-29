@@ -47,7 +47,7 @@ def load_model():
         utils_dir = os.path.join(current_dir, "utils")
         
         # Load the K-means model
-        model_path = os.path.join(utils_dir, "kmeans.pkl")
+        model_path =  "services\\segmentation_service\\utils\\kmeans.pkl"
         if os.path.exists(model_path):
             model = joblib.load(model_path)
             print(f"K-means model loaded from {model_path}")
@@ -56,7 +56,7 @@ def load_model():
             return False
         
         # Load the scaler
-        scaler_path = os.path.join(utils_dir, "scaler.pkl")
+        scaler_path = "services\\segmentation_service\\utils\\scaler.pkl"
         if os.path.exists(scaler_path):
             scaler = joblib.load(scaler_path)
             print(f"Scaler loaded from {scaler_path}")
@@ -76,7 +76,8 @@ def prepare_features(customer_data: pd.DataFrame) -> np.ndarray:
     feature_columns = [
         'Total Purchase Amount',
         'Quantity', 
-        'Age',
+        'Customer Age',
+        'Gender',
     ]
     
     # Select only the features we need
@@ -121,7 +122,7 @@ def segment_customers(customer_data: pd.DataFrame) -> Dict[str, Any]:
         if count > 0:
             avg_spent = segment_customers['Total Purchase Amount'].mean()
             avg_quantity = segment_customers['Quantity'].mean()
-            avg_age = segment_customers['Age'].mean()
+            avg_age = segment_customers['Customer Age'].mean()
             
             segment_stats[segment_id] = {
                 'name': segment_names[segment_id],
@@ -144,7 +145,7 @@ def get_segment_behavior_analysis(customer_data: pd.DataFrame) -> List[Dict[str,
     """Analyze behavior patterns for each segment"""
     behavior_data = []
     
-    for segment_id in range(5):
+    for segment_id in range(len(segment_names)):
         segment_customers = customer_data[customer_data['segment'] == segment_id]
         
         if len(segment_customers) > 0:
@@ -152,13 +153,11 @@ def get_segment_behavior_analysis(customer_data: pd.DataFrame) -> List[Dict[str,
             avg_purchases = segment_customers.groupby('Customer ID').size().mean()
             avg_spent = segment_customers['Total Purchase Amount'].mean()
             engagement_score = calculate_engagement_score(segment_customers)
-            satisfaction_score = calculate_satisfaction_score(segment_customers)
             
             behavior_data.append({
                 'segment': segment_names[segment_id],
                 'purchases': round(avg_purchases, 1),
                 'engagement': round(engagement_score, 1),
-                'satisfaction': round(satisfaction_score, 1),
                 'avg_spent': round(avg_spent, 2)
             })
     
@@ -179,20 +178,3 @@ def calculate_engagement_score(segment_data: pd.DataFrame) -> float:
     # Engagement score: purchases per customer (normalized to 0-100)
     engagement = (total_purchases / customers) * 10  # Scale factor
     return min(engagement, 100)
-
-def calculate_satisfaction_score(segment_data: pd.DataFrame) -> float:
-    """Calculate satisfaction score based on returns and purchase amounts"""
-    if len(segment_data) == 0:
-        return 0
-    
-    # Calculate return rate
-    total_purchases = len(segment_data)
-    total_returns = segment_data['Returns'].sum()
-    return_rate = (total_returns / total_purchases) if total_purchases > 0 else 0
-    
-    # Calculate average purchase amount
-    avg_purchase = segment_data['Total Purchase Amount'].mean()
-    
-    # Satisfaction score: higher for lower return rates and higher purchase amounts
-    satisfaction = (1 - return_rate) * 50 + (avg_purchase / 100) * 50
-    return min(satisfaction, 100) 

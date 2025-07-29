@@ -3,12 +3,15 @@ import pandas as pd
 import torch
 from fastapi import HTTPException
 from ..utils.data_service import get_all_customers  # Use HTTP API
-from .. import churn_service
+from . import churn_service
 from ..models.models import ChurnPredictionResponse
 from ..domain.tasks import update_task_progress
 import httpx
 import os
 import logging
+from dotenv import load_dotenv
+
+load_dotenv()
 
 numerical_cols = [
     'Product Price', 'Quantity', 'Total Purchase Amount', 'Returns', 'Age', 'Year', 'Month', 'Day',
@@ -144,7 +147,7 @@ async def get_all_customer_sequences_scaled(table_name, access_token):
 
 async def get_customers_in_batches(table_name, access_token, batch_size=1000):
     """Async generator to fetch customers in batches from the data service."""
-    DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:8011")
+    DATA_SERVICE_URL = os.getenv("DATA_SERVICE_BASE_URL")
     offset = 0
     while True:
         url = f"{DATA_SERVICE_URL}/data/customers/batch/{table_name}/?offset={offset}&limit={batch_size}"

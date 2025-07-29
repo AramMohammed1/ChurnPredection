@@ -2,7 +2,7 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from typing import Dict, Any
-from .. import segmentation_service
+from ..domain import segmentation_service
 from ..models.models import SegmentationResponse, SegmentCustomerResponse
 from ..utils.auth import get_current_user
 from ..utils.data_service import get_all_customers
@@ -38,7 +38,6 @@ async def segment_customers_endpoint(
         
         # Perform segmentation
         segmentation_result = segmentation_service.segment_customers(df)
-        
         # Get behavior analysis
         behavior_analysis = segmentation_service.get_segment_behavior_analysis(df)
         
@@ -76,7 +75,6 @@ async def get_segments(
         table_name = f"user_data_{user_id}"
         # Fetch customer data from data service
         customers = await get_all_customers(table_name, access_token)
-        
         if not customers:
             raise HTTPException(status_code=404, detail="No customer data found")
         

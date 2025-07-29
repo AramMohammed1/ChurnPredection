@@ -32,6 +32,7 @@ const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionEnded, setSessionEnded] = useState(false);
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -146,6 +147,7 @@ const Index = () => {
           onAuthenticated={() => {
             setIsAuthenticated(true);
             setShowAuthModal(false);
+            setSessionEnded(false);
           }}
         />
       </div>
@@ -175,6 +177,7 @@ const Index = () => {
               onClick={() => {
                 authService.logout();
                 setIsAuthenticated(false);
+                setSessionEnded(true);
               }}
             >
               Logout
@@ -225,15 +228,18 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="churn" className="mt-6">
-            <ChurnPrediction key={isAuthenticated ? 'auth' : 'logout'} />
+            <ChurnPrediction 
+              key={isAuthenticated ? 'auth' : 'logout'} 
+              onSessionEnd={sessionEnded ? () => {} : undefined}
+            />
           </TabsContent>
 
           <TabsContent value="segments" className="mt-6">
-            <CustomerSegmentation />
+            <CustomerSegmentation onSessionEnd={sessionEnded ? () => {} : undefined} />
           </TabsContent>
 
           <TabsContent value="cltv" className="mt-6">
-            <CLTVAnalysis />
+            <CLTVAnalysis onSessionEnd={sessionEnded ? () => {} : undefined} />
           </TabsContent>
 
           <TabsContent value="import" className="mt-6">

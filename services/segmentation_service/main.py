@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import segmentation
+from .domain import segmentation_service
 
 # Create FastAPI app
 app = FastAPI()
@@ -20,7 +21,6 @@ app.include_router(segmentation.router)
 @app.on_event("startup")
 async def startup_event():
     """Initialize database and load ML model on startup"""
-    from . import segmentation_service
     segmentation_service.load_model()
     print("✅ Segmentation service started successfully!")
     print("🤖 K-means model loaded")

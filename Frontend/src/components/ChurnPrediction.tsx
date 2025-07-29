@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, Users, TrendingDown, Target, Loader2, RefreshCw, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { churnService, ChurnData, Customer, ChurnPredictionResponse, ProgressResponse } from "@/services/churnService";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from "recharts";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie,Line, Cell } from "recharts";
 import { authService } from "@/services/authService";
 
 interface ChurnCustomer {
@@ -561,7 +561,8 @@ export const ChurnPrediction = ({ onSessionEnd }: ChurnPredictionProps) => {
         </Card>
       </div>
 
-      {/* Churn Probability Histogram */}
+
+    
       <Card>
         <CardHeader>
           <CardTitle>Churn Probability Distribution</CardTitle>
@@ -572,7 +573,7 @@ export const ChurnPrediction = ({ onSessionEnd }: ChurnPredictionProps) => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={churnHistogramData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="range" />
+                <XAxis dataKey="range" label = {{value: 'range', angle: 0, position: 'insideBottom'}}/>
                 <YAxis allowDecimals={false} label={{ value: 'Customers', angle: -90, position: 'insideLeft' }} />
                 <Tooltip formatter={(value) => [value, 'Customers']} />
                 <Bar dataKey="count" fill="#3B82F6" name="Customers" />
@@ -625,7 +626,7 @@ export const ChurnPrediction = ({ onSessionEnd }: ChurnPredictionProps) => {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={churnRiskSegmentation}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="risk" />
+                  <XAxis dataKey="risk" label = {{value: 'risk Level', angle: 0, position: 'insideTop' ,offset:24}}/>
                   <YAxis allowDecimals={false} label={{ value: 'Customers', angle: -90, position: 'insideLeft' }} />
                   <Tooltip formatter={(value) => [value, 'Customers']} />
                   <Bar dataKey="count">

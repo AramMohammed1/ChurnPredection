@@ -1,213 +1,311 @@
 
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { DollarSign, TrendingUp, Clock, Target, Star } from "lucide-react";
+import { DollarSign, TrendingUp, Clock, Target, Star, RefreshCw, Loader2, AlertTriangle } from "lucide-react";
+import { cltvService, CLTVResponse, CLTVSegmentsResponse, CLTVCustomer } from "@/services/cltvService";
+import { useToast } from "@/hooks/use-toast";
 
-export const CLTVAnalysis = () => {
-  const cltvTrend = [
-    { month: "Jan", cltv: 1200, cohort: "New" },
-    { month: "Feb", cltv: 1350, cohort: "New" },
-    { month: "Mar", cltv: 1480, cohort: "New" },
-    { month: "Apr", cltv: 1620, cohort: "New" },
-    { month: "May", cltv: 1750, cohort: "New" },
-    { month: "Jun", cltv: 1890, cohort: "New" }
-  ];
+interface CLTVAnalysisProps {
+  onSessionEnd?: () => void;
+}
 
-  const segmentCLTV = [
-    { segment: "Champions", cltv: 3240, predicted: 4100, customers: 1247 },
-    { segment: "Loyal", cltv: 2180, predicted: 2650, customers: 2891 },
-    { segment: "Potential", cltv: 890, predicted: 1450, customers: 3456 },
-    { segment: "At Risk", cltv: 1200, predicted: 800, customers: 1234 },
-    { segment: "New", cltv: 450, predicted: 1200, customers: 1278 }
-  ];
+export const CLTVAnalysis = ({ onSessionEnd }: CLTVAnalysisProps) => {
+  const [cltvData, setCltvData] = useState<CLTVResponse | null>(null);
+  const [segmentsData, setSegmentsData] = useState<CLTVSegmentsResponse | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const { toast } = useToast();
 
-  const topCustomers = [
-    {
-      id: "CUST_VIP_001",
-      name: "Alexandra Thompson",
-      currentCLTV: "$8,450",
-      predictedCLTV: "$12,300",
-      confidence: 92,
-      segment: "Champion",
-      timeToValue: "6 months"
-    },
-    {
-      id: "CUST_VIP_002", 
-      name: "Robert Kumar",
-      currentCLTV: "$6,890",
-      predictedCLTV: "$9,800",
-      confidence: 88,
-      segment: "Champion",
-      timeToValue: "8 months"
-    },
-    {
-      id: "CUST_VIP_003",
-      name: "Maria Rodriguez",
-      currentCLTV: "$5,670",
-      predictedCLTV: "$8,900",
-      confidence: 85,
-      segment: "Loyal",
-      timeToValue: "10 months"
+  // Cache keys and duration
+  const CLTV_CACHE_KEY = "cltvData";
+  const CLTV_SEGMENTS_CACHE_KEY = "cltvSegmentsData";
+  const CLTV_CACHE_EXPIRY_KEY = "cltvExpiry";
+  const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+
+  // Listen for session end (logout) and cleanup
+  useEffect(() => {
+    if (!onSessionEnd) return;
+    return () => {
+      setCltvData(null);
+      setSegmentsData(null);
+    };
+  }, [onSessionEnd]);
+
+  // Auto-load CLTV data when component mounts
+  useEffect(() => {
+    calculateCLTV();
+  }, []);
+
+  const calculateCLTV = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      // Check cache first
+      const cachedCLTV = localStorage.getItem(CLTV_CACHE_KEY);
+      const cachedSegments = localStorage.getItem(CLTV_SEGMENTS_CACHE_KEY);
+      const expiry = localStorage.getItem(CLTV_CACHE_EXPIRY_KEY);
+
+      if (
+        cachedCLTV &&
+        cachedSegments &&
+        expiry &&
+        Date.now() < Number(expiry)
+      ) {
+        try {
+          setCltvData(JSON.parse(cachedCLTV));
+          setSegmentsData(JSON.parse(cachedSegments));
+          setLoading(false);
+          return;
+        } catch (error) {
+          console.error('Error parsing cached CLTV data:', error);
+          // Clear invalid cache and continue with fresh data
+          localStorage.removeItem(CLTV_CACHE_KEY);
+          localStorage.removeItem(CLTV_SEGMENTS_CACHE_KEY);
+          localStorage.removeItem(CLTV_CACHE_EXPIRY_KEY);
+        }
+      }
+
+      // Fetch fresh data
+      const [cltvResponse, segmentsResponse] = await Promise.all([
+        cltvService.calculateCLTV(100),
+        cltvService.getCLTVSegments()
+      ]);
+
+      setCltvData(cltvResponse);
+      setSegmentsData(segmentsResponse);
+
+      // Cache the results
+      localStorage.setItem(CLTV_CACHE_KEY, JSON.stringify(cltvResponse));
+      localStorage.setItem(CLTV_SEGMENTS_CACHE_KEY, JSON.stringify(segmentsResponse));
+      localStorage.setItem(CLTV_CACHE_EXPIRY_KEY, (Date.now() + CACHE_DURATION).toString());
+
+      toast({
+        title: "Success",
+        description: "CLTV analysis completed successfully",
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to calculate CLTV";
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const handleRefresh = () => {
+    // Clear cache and reload
+    localStorage.removeItem(CLTV_CACHE_KEY);
+    localStorage.removeItem(CLTV_SEGMENTS_CACHE_KEY);
+    localStorage.removeItem(CLTV_CACHE_EXPIRY_KEY);
+    calculateCLTV();
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
+  const formatNumber = (value: number) => {
+    return new Intl.NumberFormat('en-US').format(value);
+  };
+
+  const formatPercentage = (value: number) => {
+    return `${(value * 100).toFixed(1)}%`;
+  };
+
+  // Prepare chart data
+  const segmentCLTV = segmentsData?.segments?.map(segment => ({
+    segment: segment.segment,
+    cltv: segment.average_cltv || 0,
+    customers: segment.customer_count || 0,
+    revenue: segment.total_revenue || 0
+  })) || [];
+
+  const topCustomers = cltvData?.top_customers?.slice(0, 5).map(customer => ({
+    id: `CUST_${customer.customer_id}`,
+    name: customer.customer_name || `Customer ${customer.customer_id}`,
+    customerId: customer.customer_id,
+    currentCLTV: formatCurrency(customer.cltv || 0),
+    timeToValue: `${Math.round(12 / (customer.purchase_frequency || 1))} months`,
+    totalSpent: formatCurrency(customer.total_price || 0),
+    transactions: customer.total_transaction || 0
+  })) || [];
 
   return (
     <div className="space-y-6">
-      {/* CLTV Summary Cards */}
-      <div className="grid md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average CLTV</CardTitle>
-            <DollarSign className="w-4 h-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">$1,847</div>
-            <p className="text-xs text-slate-500 mt-1">Across all customers</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">CLTV Growth</CardTitle>
-            <TrendingUp className="w-4 h-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">+23.4%</div>
-            <p className="text-xs text-slate-500 mt-1">Year over year</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Payback Period</CardTitle>
-            <Clock className="w-4 h-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">4.2 mo</div>
-            <p className="text-xs text-slate-500 mt-1">Average time to ROI</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">High-Value Rate</CardTitle>
-            <Target className="w-4 h-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">18.3%</div>
-            <p className="text-xs text-slate-500 mt-1">CLTV &gt; $2,500</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* CLTV Charts */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>CLTV Trend Analysis</CardTitle>
-            <CardDescription>Customer lifetime value progression over time</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={cltvTrend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`$${value}`, "CLTV"]} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="cltv" 
-                    stroke="#3B82F6" 
-                    strokeWidth={3}
-                    dot={{ fill: "#3B82F6", strokeWidth: 2, r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>CLTV by Segment</CardTitle>
-            <CardDescription>Current vs. predicted lifetime value</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={segmentCLTV}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="segment" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`$${value}`, ""]} />
-                  <Bar dataKey="cltv" fill="#3B82F6" name="Current CLTV" />
-                  <Bar dataKey="predicted" fill="#10B981" name="Predicted CLTV" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top Value Customers */}
+      {/* Action Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Star className="w-5 h-5 text-yellow-500" />
-            High-Value Customers
-          </CardTitle>
+          <CardTitle>CLTV Analysis</CardTitle>
           <CardDescription>
-            Customers with highest predicted lifetime value
+            Calculate Customer Lifetime Value for your data
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {topCustomers.map((customer) => (
-              <div key={customer.id} className="p-4 border rounded-lg hover:bg-slate-50 transition-colors">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h4 className="font-medium text-slate-900">{customer.name}</h4>
-                    <p className="text-sm text-slate-500">{customer.id}</p>
-                  </div>
-                  <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                    {customer.segment}
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
-                  <div>
-                    <span className="text-slate-500">Current CLTV:</span>
-                    <div className="font-medium text-blue-600">{customer.currentCLTV}</div>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Predicted CLTV:</span>
-                    <div className="font-medium text-green-600">{customer.predictedCLTV}</div>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Confidence:</span>
-                    <div className="font-medium">{customer.confidence}%</div>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Time to Value:</span>
-                    <div className="font-medium">{customer.timeToValue}</div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>Prediction Confidence</span>
-                    <span className="font-medium">{customer.confidence}%</span>
-                  </div>
-                  <Progress value={customer.confidence} className="h-2" />
-                </div>
+          <div className="flex gap-4 items-center">
+            <Button 
+              onClick={calculateCLTV} 
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              {loading ? "Calculating..." : "Calculate CLTV"}
+            </Button>
+            <Button 
+              onClick={handleRefresh} 
+              disabled={loading}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </Button>
+            {error && (
+              <div className="flex-1 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-red-700 text-sm">{error}</p>
               </div>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {cltvData && (
+        <>
+          {/* CLTV Summary Cards */}
+          <div className="grid md:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Average CLTV</CardTitle>
+                <DollarSign className="w-4 h-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {formatCurrency(cltvData.summary.average_cltv || 0)}
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Across all customers</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <TrendingUp className="w-4 h-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(cltvData.summary.total_revenue || 0)}
+                </div>
+                <p className="text-xs text-slate-500 mt-1">From all customers</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Churn Rate</CardTitle>
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">
+                  {formatPercentage(cltvData.summary.churn_rate || 0)}
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Predicted churn rate</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+                <Target className="w-4 h-4 text-amber-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-amber-600">
+                  {formatNumber(cltvData.summary.total_customers || 0)}
+                </div>
+                <p className="text-xs text-slate-500 mt-1">In database</p>
+              </CardContent>
+            </Card>
+          </div>
+
+ 
+          {/* Top Value Customers */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-yellow-500" />
+                High-Value Customers
+              </CardTitle>
+              <CardDescription>
+                Customers with highest lifetime value
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {topCustomers.map((customer) => (
+                  <div key={customer.id} className="p-4 border rounded-lg hover:bg-slate-50 transition-colors">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h4 className="font-medium text-slate-900">{customer.name}</h4>
+                        <p className="text-sm text-slate-500">Customer ID: {customer.customerId}</p>
+                      </div>
+                      
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
+                      <div>
+                        <span className="text-slate-500">Total Spent:</span>
+                        <div className="font-medium text-blue-600">{customer.totalSpent}</div>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Predicted CLTV:</span>
+                        <div className="font-medium text-green-600">{customer.currentCLTV}</div>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Transactions:</span>
+                        <div className="font-medium">{customer.transactions}</div>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Time to Value:</span>
+                        <div className="font-medium">{customer.timeToValue}</div>
+                      </div>
+                    </div>
+
+                    
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {!cltvData && !loading && (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <DollarSign className="w-12 h-12 text-slate-300 mb-4" />
+            <h3 className="text-lg font-medium text-slate-900 mb-2">No CLTV Data</h3>
+            <p className="text-slate-500 text-center max-w-md">
+              Click "Calculate CLTV" to analyze your customer lifetime value data.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

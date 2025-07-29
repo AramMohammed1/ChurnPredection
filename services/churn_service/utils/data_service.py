@@ -1,8 +1,12 @@
 import os
 import httpx
 from typing import Any, Dict, List
+from dotenv import load_dotenv
 
-DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:8011")  
+load_dotenv()
+
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_BASE_URL")  
+
 async def get_all_customers(table_name: str, access_token: str) -> List[Dict[str, Any]]:
     """
     Fetch all customers from the data service for the given table_name.

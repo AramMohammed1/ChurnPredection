@@ -8,12 +8,31 @@ import { Users, Crown, Star, Heart, Shield, AlertCircle, RefreshCw, Loader2 } fr
 import { segmentationService, SegmentationResponse, SegmentInfo, BehaviorAnalysis } from "@/services/segmentationService";
 import { useToast } from "@/hooks/use-toast";
 
-export const CustomerSegmentation = () => {
+interface CustomerSegmentationProps {
+  onSessionEnd?: () => void;
+}
+
+export const CustomerSegmentation = ({ onSessionEnd }: CustomerSegmentationProps) => {
   const [segmentationData, setSegmentationData] = useState<SegmentationResponse | null>(null);
   const [behaviorData, setBehaviorData] = useState<BehaviorAnalysis[]>([]);
   const [loading, setLoading] = useState(false);
   const [tableName, setTableName] = useState("customer_data"); // Default table name
   const { toast } = useToast();
+
+  // Cache keys and duration
+  const SEGMENTATION_CACHE_KEY = "segmentationData";
+  const BEHAVIOR_CACHE_KEY = "segmentationBehaviorData";
+  const SEGMENTATION_CACHE_EXPIRY_KEY = "segmentationExpiry";
+  const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+
+  // Listen for session end (logout) and cleanup
+  useEffect(() => {
+    if (!onSessionEnd) return;
+    return () => {
+      setSegmentationData(null);
+      setBehaviorData([]);
+    };
+  }, [onSessionEnd]);
 
   const segmentIcons = {
     "Champions": Crown,
@@ -22,15 +41,38 @@ export const CustomerSegmentation = () => {
     "At Risk": AlertCircle,
     "New Customers": Users,
     "Need Attention": Shield,
-
   };
 
   const loadSegmentationData = async () => {
     setLoading(true);
     try {
+      // Check cache first
+      const cachedSegmentation = localStorage.getItem(SEGMENTATION_CACHE_KEY);
+      const cachedBehavior = localStorage.getItem(BEHAVIOR_CACHE_KEY);
+      const expiry = localStorage.getItem(SEGMENTATION_CACHE_EXPIRY_KEY);
+
+      if (
+        cachedSegmentation &&
+        cachedBehavior &&
+        expiry &&
+        Date.now() < Number(expiry)
+      ) {
+        setSegmentationData(JSON.parse(cachedSegmentation));
+        setBehaviorData(JSON.parse(cachedBehavior));
+        setLoading(false);
+        return;
+      }
+
+      // Fetch fresh data
       const data = await segmentationService.getSegments(tableName);
       setSegmentationData(data);
       setBehaviorData(data.behavior_analysis);
+
+      // Cache the results
+      localStorage.setItem(SEGMENTATION_CACHE_KEY, JSON.stringify(data));
+      localStorage.setItem(BEHAVIOR_CACHE_KEY, JSON.stringify(data.behavior_analysis));
+      localStorage.setItem(SEGMENTATION_CACHE_EXPIRY_KEY, (Date.now() + CACHE_DURATION).toString());
+
       toast({
         title: "Segmentation loaded",
         description: "Customer segments have been successfully loaded.",
@@ -52,6 +94,10 @@ export const CustomerSegmentation = () => {
   }, [tableName]);
 
   const handleRefresh = () => {
+    // Clear cache and reload
+    localStorage.removeItem(SEGMENTATION_CACHE_KEY);
+    localStorage.removeItem(BEHAVIOR_CACHE_KEY);
+    localStorage.removeItem(SEGMENTATION_CACHE_EXPIRY_KEY);
     loadSegmentationData();
   };
 
@@ -132,7 +178,7 @@ export const CustomerSegmentation = () => {
             <CardDescription>Breakdown of customers by segment</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
+            <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -142,13 +188,14 @@ export const CustomerSegmentation = () => {
                     innerRadius={60}
                     outerRadius={100}
                     paddingAngle={2}
+                    label = {({ name, percent }) => `${name}`}
                     dataKey="percentage"
                   >
                     {segmentsArray.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [`${value}%`, "Percentage"]} />
+                  <Tooltip formatter={(value,key) => [`${value}%`,`${key}`]} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -160,13 +207,14 @@ export const CustomerSegmentation = () => {
             <CardTitle>Behavioral Analysis</CardTitle>
             <CardDescription>Purchase frequency and engagement by segment</CardDescription>
           </CardHeader>
+          
           <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="90%">
                 <BarChart data={behaviorData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="segment" />
-                  <YAxis />
+                  <XAxis dataKey="segment"  label={{value: 'segment', angle: 0, position: 'insideBottom', offset: -2}}/>
+                  <YAxis  label={{ value: 'frequency/Engagment', angle: -90, position: 'Left',offset: 5}}/>
                   <Tooltip />
                   <Bar dataKey="purchases" fill="#3B82F6" name="Avg. Purchases/Year" />
                   <Bar dataKey="engagement" fill="#10B981" name="Engagement Score" />
