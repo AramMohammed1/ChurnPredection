@@ -4,7 +4,7 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 from typing import Optional
 from ..database import engine
-from ..database.repositories import get_all_customers_from_db, get_customer, insert_csv_data_to_table, save_upload_history, get_user_upload_history, get_customers_in_batches_from_db,create_user_prediction_table
+from ..database.repositories import get_all_customers_from_db, get_customer, insert_csv_data_to_table, save_upload_history, get_user_upload_history, get_customers_in_batches_from_db,create_user_prediction_table,get_customers_aggregated
 from ..models.ColumnMapping import ColumnMapping
 import requests
 import json
@@ -279,6 +279,18 @@ async def get_customer_aggregated_data(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching customer data: {str(e)}")
+
+@router.get("/customers/all_agg/{table_name}/")
+async def get_all_customers_agg(
+    table_name: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all customers from specified table"""
+    table_name = f"user_data_{current_user['id']}"
+    try:
+        return get_customers_aggregated(table_name).to_dict('records')
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching customers: {str(e)}") 
 
 @router.get("/customers/all/{table_name}/")
 async def get_all_customers(

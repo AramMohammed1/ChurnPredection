@@ -8,7 +8,7 @@ async def get_all_customers(table_name: str, access_token: str) -> List[Dict[str
     """
     Fetch all customers from the data service for the given table_name.
     """
-    url = f"{DATA_SERVICE_URL}/data/customers/all/{table_name}/"
+    url = f"{DATA_SERVICE_URL}/data/customers/all_agg/{table_name}/"
     headers = {"Authorization": f"Bearer {access_token}"}
     
     async with httpx.AsyncClient() as client:

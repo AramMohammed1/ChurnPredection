@@ -15,7 +15,6 @@ class BehaviorAnalysis(BaseModel):
     segment: str
     purchases: float
     engagement: float
-    satisfaction: float
     avg_spent: float
 
 class CustomerSegment(BaseModel):

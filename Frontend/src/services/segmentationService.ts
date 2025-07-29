@@ -17,7 +17,6 @@ export interface BehaviorAnalysis {
   segment: string;
   purchases: number;
   engagement: number;
-  satisfaction: number;
   avg_spent: number;
 }
 
@@ -69,7 +68,10 @@ class SegmentationService {
   async getSegments(tableName: string): Promise<SegmentationResponse> {
     try {
       const headers = await this.getAuthHeaders();
-      const response = await fetch(`${SEGMENTATION_SERVICE_URL}/segmentation/segments/user_data_9/`, {
+      const user = await authService.getCurrentUser();
+      const userTableName = user ? `user_data_${user.id || 9}` : 'user_data_9';
+      
+      const response = await fetch(`${SEGMENTATION_SERVICE_URL}/segmentation/segments/${userTableName}/`, {
         method: 'GET',
         headers
       });

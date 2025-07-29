@@ -7,6 +7,7 @@ interface AuthTokens {
 }
 
 interface User {
+  id: number;
   username: string;
   email: string;
 }
@@ -186,6 +187,17 @@ class AuthService {
     localStorage.removeItem("churnPredictionData");
     localStorage.removeItem("churnPredictionCustomers");
     localStorage.removeItem("churnPredictionExpiry");
+    
+    // Clear segmentation cache
+    localStorage.removeItem("segmentationData");
+    localStorage.removeItem("segmentationBehaviorData");
+    localStorage.removeItem("segmentationExpiry");
+    
+    // Clear CLTV cache
+    localStorage.removeItem("cltvData");
+    localStorage.removeItem("cltvSegmentsData");
+    localStorage.removeItem("cltvExpiry");
+    
     localStorage.removeItem("current_user");
     if (this.refreshTimeout) {
       clearTimeout(this.refreshTimeout);

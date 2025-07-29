@@ -5,7 +5,7 @@ This service provides AI-powered customer segmentation using K-means clustering.
 ## Features
 
 - **Customer Segmentation**: Categorizes customers into 5 segments using K-means clustering
-- **Behavioral Analysis**: Analyzes purchase patterns, engagement, and satisfaction scores
+- **Behavioral Analysis**: Analyzes purchase patterns, and engagement scores
 - **Real-time Processing**: Processes customer data in real-time
 - **RESTful API**: Provides comprehensive API endpoints for segmentation
 

@@ -6,6 +6,27 @@ from datetime import datetime
 from sqlalchemy import Table, Column, Integer, Float, String, DateTime, MetaData
 
 
+def get_customers_aggregated( table_name: str)->pd.DataFrame:
+    """Get specific customer by ID"""
+    query = f"SELECT * FROM {table_name}"
+    df = pd.read_sql(query, engine, params={"table_name": table_name})
+    if df.empty:
+        raise HTTPException(status_code=404, detail=f"customer {customer_id} not found")
+    features = ['Customer ID','Total Purchase Amount', 'Quantity', 'Customer Age','Gender_Male']
+
+    df_cluster = df[features].copy()
+    df_cluster['Customer ID copy'] = df_cluster['Customer ID'].copy()
+    df_cluster.rename(columns={'Gender_Male':'Gender'},inplace=True)
+# Group by Customer ID and aggregate
+    df_agg = df_cluster.groupby('Customer ID copy').agg({
+        'Total Purchase Amount': 'sum',
+        'Quantity': 'sum',
+        'Customer Age': 'first',
+        'Gender': 'first',
+        'Customer ID': 'first',
+    })
+    df_cluster = df_agg
+    return df_cluster
 
 def get_customer (customer_id: int, table_name: str)->pd.DataFrame:
     """Get specific customer by ID"""
