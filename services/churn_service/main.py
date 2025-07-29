@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from . import churn_service
+from .domain import churn_service
 from .routers import churn
 
 # Create FastAPI app

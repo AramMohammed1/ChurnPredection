@@ -1,7 +1,12 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-SQLALCHEMY_DATABASE_URL = 'postgresql://postgres:admin@localhost/churn_prediction_db'
+import os 
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL","postgresql://postgres:admin@localhost/churn_prediction_db")
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 

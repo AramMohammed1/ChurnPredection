@@ -5,12 +5,15 @@ import httpx
 import os
 import math
 from ..utils.auth import get_current_user
+from dotenv import load_dotenv
+
+load_dotenv()
 
 router = APIRouter(prefix="/cltv", tags=["CLTV Analysis"])
 
 # Service URLs
-DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://localhost:8011")
-CHURN_SERVICE_URL = os.getenv("CHURN_SERVICE_URL", "http://localhost:8013")
+DATA_SERVICE_URL = os.getenv("DATA_SERVICE_BASE_URL")
+CHURN_SERVICE_URL = os.getenv("CHURN_SERVICE_BASE_URL")
 
 def make_json_safe(value):
     """
@@ -35,7 +38,7 @@ async def get_churn_rate_from_service(table_name: str, auth_token: str) -> float
             
             if response.status_code == 200:
                 data = response.json()
-                # print(data)
+
                 return data.get("churn_rate", 0.01) 
             else:
                 print(f"Warning: Failed to get churn rate from churn service: {response.status_code}")
@@ -140,8 +143,8 @@ async def calculate_cltv_for_table(
             raise HTTPException(status_code=404, detail="No data found in the specified table")
         
         # Get churn rate from churn service
-        # churn_rate = await get_churn_rate_from_service(table_name, auth_token)
-        churn_rate = 0.2
+        churn_rate = await get_churn_rate_from_service(table_name, auth_token)
+        
         # Calculate CLTV with the obtained churn rate
         cltv_results = calculate_cltv(df, churn_rate)
         
@@ -219,7 +222,7 @@ async def get_customer_cltv(
         
         # Get churn rate from churn service
         churn_rate = await get_churn_rate_from_service(table_name, auth_token)
-        churn_rate = 0.6
+        
         # Calculate CLTV for this customer
         cltv_results = calculate_cltv(customer_data.to_frame().T if len(customer_data) == 1 else customer_data, churn_rate)
         
@@ -270,7 +273,7 @@ async def get_cltv_segments(
         
         # Get churn rate from churn service
         churn_rate = await get_churn_rate_from_service(table_name, auth_token)
-        churn_rate = 0.6
+        
         # Calculate CLTV
         cltv_results = calculate_cltv(df, churn_rate)
         

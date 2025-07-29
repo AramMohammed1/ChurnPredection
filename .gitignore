@@ -9,6 +9,6 @@ __pycache__/
 .Python
 *.so 
 *.csv
-
+.secrets
 
 .vite

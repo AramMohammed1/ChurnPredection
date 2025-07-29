@@ -3,9 +3,12 @@ import httpx
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Get auth service URL from environment
-AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8012")
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_BASE_URL")
 
 security = HTTPBearer()
 

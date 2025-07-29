@@ -1,3 +1,4 @@
+import os
 from tkinter import W
 import torch
 import torch.nn as nn
@@ -10,6 +11,11 @@ import joblib
 import math
 import pandas as pd
 import numpy as np
+from dotenv import load_dotenv
+load_dotenv()
+
+churn_model_path = os.getenv("CHURN_MODEL_PATH","")
+scaler_path = os.getenv("CHURN_SCALER_PATH","")
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=10000):
@@ -120,7 +126,9 @@ def load_model():
     global model, scaler
         # Try to load the scaler if it was saved
     try:
+        # scaler = joblib.load(scaler_path)
         scaler = joblib.load("services\\churn_service\\utils\\scaler.pkl")
+
         print(scaler)
         print("Scaler loaded successfully!")
         
@@ -130,6 +138,8 @@ def load_model():
 
     try:
         # Load the model state
+        # checkpoint = torch.load('services\\churn_service\\utils\\best_model.pth', map_location=torch.device('cpu'))
+       
         checkpoint = torch.load('services\\churn_service\\utils\\best_model.pth', map_location=torch.device('cpu'))
         
         # Extract model parameters

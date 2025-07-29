@@ -2,7 +2,7 @@ import pandas as pd
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from typing import Dict, Any
-from .. import segmentation_service
+from ..domain import segmentation_service
 from ..models.models import SegmentationResponse, SegmentCustomerResponse
 from ..utils.auth import get_current_user
 from ..utils.data_service import get_all_customers

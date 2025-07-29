@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001'; // API Gateway
+const API_BASE_URL = import.meta.env.VITE_API_GETWAY_BASE_URL;
 
 export interface CLTVCustomer {
   customer_id: number;

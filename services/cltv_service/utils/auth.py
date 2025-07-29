@@ -2,8 +2,11 @@ import os
 import httpx
 from fastapi import Depends, HTTPException, status, Request
 from typing import Optional
+from dotenv import load_dotenv  
 
-AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8012")  # Change to your auth service URL
+load_dotenv()
+
+AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_BASE_URL") 
 
 async def get_current_user(request: Request):
     """

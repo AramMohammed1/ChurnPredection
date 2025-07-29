@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8001";
+const API_BASE = import.meta.env.VITE_API_GETWAY_BASE_URL;
 
 interface AuthTokens {
   access_token: string;

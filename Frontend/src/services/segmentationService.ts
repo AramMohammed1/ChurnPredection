@@ -1,6 +1,6 @@
 import { authService } from './authService';
 
-const SEGMENTATION_SERVICE_URL = import.meta.env.VITE_SEGMENTATION_SERVICE_URL || 'http://localhost:8001';
+const SEGMENTATION_SERVICE_URL = import.meta.env.VITE_API_GETWAY_BASE_URL;
 
 export interface SegmentInfo {
   name: string;

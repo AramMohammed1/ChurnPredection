@@ -47,7 +47,7 @@ def load_model():
         utils_dir = os.path.join(current_dir, "utils")
         
         # Load the K-means model
-        model_path = os.path.join(utils_dir, "kmeans.pkl")
+        model_path =  "services\\segmentation_service\\utils\\kmeans.pkl"
         if os.path.exists(model_path):
             model = joblib.load(model_path)
             print(f"K-means model loaded from {model_path}")
@@ -56,7 +56,7 @@ def load_model():
             return False
         
         # Load the scaler
-        scaler_path = os.path.join(utils_dir, "scaler.pkl")
+        scaler_path = "services\\segmentation_service\\utils\\scaler.pkl"
         if os.path.exists(scaler_path):
             scaler = joblib.load(scaler_path)
             print(f"Scaler loaded from {scaler_path}")
