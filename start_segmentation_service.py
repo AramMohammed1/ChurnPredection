@@ -6,7 +6,6 @@ import uvicorn
 import os
 import sys
 
-# Add the services directory to the Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'services'))
 
 if __name__ == "__main__":

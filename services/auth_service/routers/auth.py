@@ -8,12 +8,8 @@ from ..auth_utils import *
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
-# OAuth2 scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
-# Pydantic models
-
-# Dependency to get current user
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -37,7 +33,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 
 @router.post("/register", response_model=Token)
 def register(user: UserCreate, db: Session = Depends(get_db)):
-    # Check if user exists
     existing_user = db.query(User).filter(
         (User.username == user.username) | (User.email == user.email),
         User.is_deleted == False
@@ -48,8 +43,6 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username or email already registered"
         )
-    
-    # Create new user
     hashed_password = hash_password(user.password)
     db_user = User(
         username=user.username,
@@ -61,7 +54,6 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
     
-    # Create tokens
     access_token = create_access_token(data={"sub": user.username})
     refresh_token = create_refresh_token(data={"sub": user.username})
     

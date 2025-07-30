@@ -17,7 +17,6 @@ def get_customers_aggregated( table_name: str)->pd.DataFrame:
     df_cluster = df[features].copy()
     df_cluster['Customer ID copy'] = df_cluster['Customer ID'].copy()
     df_cluster.rename(columns={'Gender_Male':'Gender'},inplace=True)
-# Group by Customer ID and aggregate
     df_agg = df_cluster.groupby('Customer ID copy').agg({
         'Total Purchase Amount': 'sum',
         'Quantity': 'sum',
@@ -30,7 +29,6 @@ def get_customers_aggregated( table_name: str)->pd.DataFrame:
 
 def get_customer (customer_id: int, table_name: str)->pd.DataFrame:
     """Get specific customer by ID"""
-    # Convert numpy types to Python native types
     try:
         customer_id = int(customer_id)
     except (ValueError, TypeError):
@@ -62,7 +60,6 @@ def create_user_prediction_table(user_id):
     predictions_table_name = f"user_predictions_{user_id}"
     metadata = MetaData()
 
-    # Define the table schema
     predictions_table = Table(
         predictions_table_name,
         metadata,
@@ -77,7 +74,6 @@ def create_user_prediction_table(user_id):
         extend_existing=True
     )
 
-    # Create the table if it doesn't exist
     if not engine.dialect.has_table(engine.connect(), predictions_table_name):
         predictions_table.create(engine)
 
@@ -86,11 +82,8 @@ def insert_csv_data_to_table(csv_file_path, table_name, engine, column_mapping=N
     """ 
     Insert CSV data into the specified table (now used for per-user tables)
     """
-    # Read CSV file
     data = pd.read_csv(csv_file_path, low_memory=False)
-    # Apply column mapping if provided
     if column_mapping:
-        # Create mapping dictionary - map user's column names to required system names
         mapping_dict = {
             column_mapping.customer_id: 'Customer ID',
             column_mapping.customer_name: 'Customer Name',
@@ -106,23 +99,19 @@ def insert_csv_data_to_table(csv_file_path, table_name, engine, column_mapping=N
             column_mapping.churn: 'Churn'
         }
         
-        # Rename columns from user's names to system names
         data = data.rename(columns=mapping_dict)
     
-    # Ensure all required columns exist
     required_columns = [
         'Customer ID', 'Customer Name', 'Purchase Date', 'Product Price', 'Quantity', 
         'Total Purchase Amount', 'Returns', 'Age', 'Gender', 'Payment Method', 
         'Product Category', 'Churn'
     ]    
-    # Process the data
     data['Purchase Date'] = pd.to_datetime(data['Purchase Date'])
     data['Year'] = data['Purchase Date'].dt.year
     data['Month'] = data['Purchase Date'].dt.month
     data['Day'] = data['Purchase Date'].dt.day
     
 
-    # Convert numeric columns to proper types
     data['Age'] = pd.to_numeric(data['Age'], errors='coerce').fillna(30)
     data['Product Price'] = pd.to_numeric(data['Product Price'], errors='coerce').fillna(0)
     data['Quantity'] = pd.to_numeric(data['Quantity'], errors='coerce').fillna(1)
@@ -130,16 +119,13 @@ def insert_csv_data_to_table(csv_file_path, table_name, engine, column_mapping=N
     data['Returns'] = pd.to_numeric(data['Returns'], errors='coerce').fillna(0)
     data['Churn'] = pd.to_numeric(data['Churn'], errors='coerce').fillna(0)
     
-    # One hot encoding for categorical columns
     categorical_columns = ['Gender', 'Payment Method', 'Product Category']
     data = pd.get_dummies(data, columns=categorical_columns, drop_first=True)
 
-    # Convert boolean columns to float
     for col in data.columns:
         if data[col].dtype == bool:
             data[col] = data[col].astype(float)
 
-    # Insert data into table
     data.to_sql(table_name, engine, if_exists='replace', index=False)
     print(f"Data inserted into table '{table_name}' successfully!")
     return len(data)
@@ -152,7 +138,7 @@ def save_upload_history(user_id: int, filename: str, table_name: str, status: st
             user_id=user_id,
             filename=filename,
             table_name=table_name,
-            upload_time=datetime.now(),  # Use local time instead of UTC
+            upload_time=datetime.now(),  
             status=status,
             file_size=file_size,
             records_count=records_count,

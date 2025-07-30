@@ -2,7 +2,6 @@ import uuid
 import json
 import logging
 
-# Try to use Redis, fallback to in-memory if not available
 try:
     import redis
     redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
@@ -14,7 +13,6 @@ except Exception as e:
     print(f"⚠️ Redis not available: {e}")
     print("🔄 Falling back to in-memory storage")
     USE_REDIS = False
-    # Fallback to in-memory storage
     task_store = {}
 
 def _task_key(task_id: str) -> str:

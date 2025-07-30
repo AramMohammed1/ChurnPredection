@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Get auth service URL from environment
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_BASE_URL")
 
 security = HTTPBearer()
@@ -19,7 +18,6 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     token = credentials.credentials
     
     try:
-        # Verify token with auth service
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{AUTH_SERVICE_URL}/auth/me",

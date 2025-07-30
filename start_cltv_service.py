@@ -3,7 +3,6 @@ import os
 from services.cltv_service.main import app
 
 if __name__ == "__main__":
-    # Set the port for CLTV service
     port = int(os.getenv("CLTV_SERVICE_PORT", 8003))
     
     print(f"🚀 Starting CLTV Service on port {port}")

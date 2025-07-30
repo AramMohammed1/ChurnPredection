@@ -10,7 +10,7 @@ class UploadHistory(Base):
     filename = Column(String, nullable=False)
     table_name = Column(String, nullable=False)
     upload_time = Column(DateTime, default=datetime.utcnow)
-    status = Column(String, nullable=False)  # 'success' or 'error'
+    status = Column(String, nullable=False)  
     file_size = Column(Integer, nullable=False)
     records_count = Column(Integer, nullable=True)
     error_message = Column(String, nullable=True) 

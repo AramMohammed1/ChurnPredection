@@ -7,7 +7,6 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 import logging
 
-# Global variables to store the loaded model and scaler
 model = None
 scaler = None
 segment_names = {
@@ -42,11 +41,9 @@ def load_model():
     global model, scaler
     
     try:
-        # Get the directory where this file is located
         current_dir = os.path.dirname(os.path.abspath(__file__))
         utils_dir = os.path.join(current_dir, "utils")
         
-        # Load the K-means model
         model_path =  "services\\segmentation_service\\utils\\kmeans.pkl"
         if os.path.exists(model_path):
             model = joblib.load(model_path)
@@ -55,7 +52,6 @@ def load_model():
             print(f"Model file not found at {model_path}")
             return False
         
-        # Load the scaler
         scaler_path = "services\\segmentation_service\\utils\\scaler.pkl"
         if os.path.exists(scaler_path):
             scaler = joblib.load(scaler_path)
@@ -72,7 +68,6 @@ def load_model():
 
 def prepare_features(customer_data: pd.DataFrame) -> np.ndarray:
     """Prepare features for segmentation from customer data"""
-    # Define the features used for segmentation
     feature_columns = [
         'Total Purchase Amount',
         'Quantity', 
@@ -80,13 +75,10 @@ def prepare_features(customer_data: pd.DataFrame) -> np.ndarray:
         'Gender',
     ]
     
-    # Select only the features we need
     features = customer_data[feature_columns].copy()
     
-    # Handle missing values
     features = features.fillna(0)
     
-    # Convert to numpy array
     feature_array = features.values
     
     return feature_array
@@ -98,20 +90,15 @@ def segment_customers(customer_data: pd.DataFrame) -> Dict[str, Any]:
     if model is None or scaler is None:
         raise Exception("Model or scaler not loaded")
     
-    # Prepare features
     features = prepare_features(customer_data)
     
-    # Scale the features
     features_scaled = scaler.transform(features)
     
-    # Predict segments
     segments = model.predict(features_scaled)
     
-    # Add segment labels to the dataframe
     customer_data['segment'] = segments
     customer_data['segment_name'] = customer_data['segment'].map(segment_names)
     
-    # Calculate segment statistics
     segment_stats = {}
     total_customers = len(customer_data)
     
@@ -149,7 +136,6 @@ def get_segment_behavior_analysis(customer_data: pd.DataFrame) -> List[Dict[str,
         segment_customers = customer_data[customer_data['segment'] == segment_id]
         
         if len(segment_customers) > 0:
-            # Calculate behavioral metrics
             avg_purchases = segment_customers.groupby('Customer ID').size().mean()
             avg_spent = segment_customers['Total Purchase Amount'].mean()
             engagement_score = calculate_engagement_score(segment_customers)
@@ -168,13 +154,11 @@ def calculate_engagement_score(segment_data: pd.DataFrame) -> float:
     if len(segment_data) == 0:
         return 0
     
-    # Simple engagement score based on purchase frequency
     customers = segment_data['Customer ID'].nunique()
     total_purchases = len(segment_data)
     
     if customers == 0:
         return 0
     
-    # Engagement score: purchases per customer (normalized to 0-100)
-    engagement = (total_purchases / customers) * 10  # Scale factor
+    engagement = (total_purchases / customers) * 10  
     return min(engagement, 100)

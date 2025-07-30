@@ -3,10 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from .domain import churn_service
 from .routers import churn
 
-# Create FastAPI app
 app = FastAPI()
 
-# Allow all origins (for development) - MUST be before routers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,7 +13,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers AFTER CORS middleware
 app.include_router(churn.router)
 
 @app.on_event("startup")
@@ -51,7 +48,6 @@ async def health_check():
         "timestamp": "2024-01-01T00:00:00Z"
     }
 
-# Add explicit OPTIONS handler for debugging
 @app.options("/{path:path}")
 async def options_handler(path: str):
     """Handle OPTIONS requests for CORS preflight"""

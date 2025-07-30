@@ -7,9 +7,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from ..domain.tasks import *
 from ..models.models import User
-from ..utils.auth import get_current_user  # Use the new dependency
-###############################
-# api connection with the gateway about the user
+from ..utils.auth import get_current_user  
 from ..domain.churn import get_customer_sequence_scaled, predict_churn, predict_churned_customers, predict_churn_batch as predict_churn_batch_domain
 from ..utils.data_service import get_all_customers
 
@@ -77,7 +75,6 @@ async def predict_churn_batch(
             total_customers = len(df['Customer ID'].unique())
             update_task_progress(task_id, 0, total_customers)
 
-            # Use new batch prediction function
             predictions = await predict_churn_batch_domain(table_name, access_token, task_id=task_id, total_customers=total_customers, batch_size=500)
             update_task_progress(task_id, total_customers, total_customers)
             complete_task(task_id, predictions)
@@ -135,27 +132,23 @@ async def get_churn_rate_endpoint(
     """
     access_token = request.headers.get("Authorization", "").replace("Bearer ", "")
     try:
-        # Get all customers and their churn predictions
         customers = await get_all_customers(table_name, access_token)
         df = pd.DataFrame(customers)
         
         if df.empty:
             return {"churn_rate": 0.0, "total_customers": 0, "churned_customers": 0}
         
-        # Get unique customer IDs
         unique_customers = df['Customer ID'].unique()
         total_customers = len(unique_customers)
         
         if total_customers == 0:
             return {"churn_rate": 0.0, "total_customers": 0, "churned_customers": 0}
         
-        # Get churn predictions for all customers
         churned_count = 0
         for customer_id in unique_customers:
             try:
                 result, _ = await predict_churn(customer_id, table_name, access_token)
                 if result and len(result) > 0:
-                    # Check if the customer is predicted to churn
                     if result[len(result)-1].get('churn_prediction', False):
                         churned_count += 1
             except Exception as e: 

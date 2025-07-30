@@ -27,9 +27,7 @@ class Settings(BaseSettings):
     api_description: str = "A microservices-based churn prediction system"
     api_version: str = "1.0.0"
     
-    # Task management
     max_concurrent_tasks: int = 5
     
 
-# Create global settings instance
 settings = Settings() 

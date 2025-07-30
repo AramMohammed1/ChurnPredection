@@ -35,11 +35,9 @@ async def upload_csv(
     try:
         user_id = current_user["id"]
     
-        # Validate file type
         if not file.filename or not file.filename.endswith('.csv'):
             raise HTTPException(status_code=400, detail="Only CSV files are allowed")
 
-        # Parse column mapping if provided
         column_mapping = None
         if column_mapping_json:
             try:
@@ -47,20 +45,16 @@ async def upload_csv(
             except Exception as e:
                 raise HTTPException(status_code=422, detail=f"Invalid column mapping format: {str(e)}")
 
-        # Create a temporary file to store the uploaded CSV
        
         with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
-            # Read the uploaded file content
             content = await file.read()
             temp_file.write(content)
             temp_file_path = temp_file.name
 
         try:
             table_name = f"user_data_{user_id}"
-            # Insert the CSV data into the database with column mapping
             records_count = insert_csv_data_to_table(temp_file_path, table_name, engine, column_mapping)
             create_user_prediction_table(user_id)   
-            # Save successful upload to history
             try:
                 save_upload_history(
                     user_id=user_id,
@@ -81,7 +75,6 @@ async def upload_csv(
                 "records_count": records_count
             }
         except Exception as e:
-            # Save failed upload to history
             save_upload_history(
                 user_id=user_id,
                 filename=file.filename,
@@ -92,7 +85,6 @@ async def upload_csv(
             )
             raise e
         finally:
-            # Clean up the temporary file
             if os.path.exists(temp_file_path):
                 os.unlink(temp_file_path)
 
@@ -120,18 +112,15 @@ async def validate_csv_columns(file: UploadFile = File(...)):
     Validate CSV file and return available columns for mapping
     """
     try:
-        # Validate file type
         if not file.filename or not file.filename.endswith('.csv'):
             raise HTTPException(status_code=400, detail="Only CSV files are allowed")
 
-        # Read CSV headers
         content = await file.read()
         with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
             temp_file.write(content)
             temp_file_path = temp_file.name
 
         try:
-            # Read just the headers
             df = pd.read_csv(temp_file_path, nrows=0)
             columns = df.columns.tolist()
 
@@ -158,11 +147,9 @@ async def import_from_api(
     """
     try:
         user_id = current_user["id"]
-        # Validate API endpoint
         if not api_endpoint.startswith(('http://', 'https://')):
             raise HTTPException(status_code=400, detail="Invalid API endpoint URL")
 
-        # Make request to external API
         headers = {
             'Authorization': f'Bearer {api_key}',
             'Content-Type': 'application/json'
@@ -174,13 +161,11 @@ async def import_from_api(
         except requests.exceptions.RequestException as e:
             raise HTTPException(status_code=400, detail=f"Failed to fetch data from API: {str(e)}")
 
-        # Parse JSON response
         try:
             api_data = response.json()
         except json.JSONDecodeError:
             raise HTTPException(status_code=400, detail="Invalid JSON response from API")
 
-        # Convert to DataFrame
         if isinstance(api_data, list):
             df = pd.DataFrame(api_data)
         elif isinstance(api_data, dict) and 'data' in api_data:
@@ -191,7 +176,6 @@ async def import_from_api(
         if df.empty:
             raise HTTPException(status_code=400, detail="No data received from API")
 
-        # Create temporary CSV file for processing
         with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as temp_file:
             df.to_csv(temp_file.name, index=False)
             temp_file_path = temp_file.name
@@ -199,10 +183,8 @@ async def import_from_api(
         try:
             table_name = f"user_data_{user_id}"
 
-            # Insert the data into the database (no column mapping needed as API should handle this)
             records_count = insert_csv_data_to_table(temp_file_path, table_name, engine, None)
 
-            # Save successful import to history
             save_upload_history(
                 user_id=user_id,
                 filename=f"API Import from {api_endpoint}",
@@ -221,7 +203,6 @@ async def import_from_api(
             }
 
         except Exception as e:
-            # Save failed import to history
             save_upload_history(
                 user_id=user_id,
                 filename=f"API Import from {api_endpoint}",
@@ -232,7 +213,6 @@ async def import_from_api(
             )
             raise e
         finally:
-            # Clean up temporary file
             if os.path.exists(temp_file_path):
                 os.unlink(temp_file_path)
 
@@ -266,7 +246,6 @@ async def get_customer_aggregated_data(
         user_id = current_user["id"]
         x = get_customer(customer_id, table_name)
         totalSpent = 0
-        # Calculate total spent
         for i in range(len(x)):
             totalSpent += x.iloc[i]['Product Price'] * x.iloc[i]['Quantity']
 
@@ -313,14 +292,12 @@ async def get_customers_batch(
     """Get a batch of customers from specified table (for streaming large datasets)"""
     try:
         batches = get_customers_in_batches_from_db(table_name, batch_size=limit)
-        # Skip to the correct offset
         skipped = 0
         for batch in batches:
             batch_len = len(batch)
             if skipped + batch_len <= offset:
                 skipped += batch_len
                 continue
-            # Return the correct slice from this batch
             start = max(0, offset - skipped)
             end = start + limit
             result = batch.iloc[start:end].to_dict('records')

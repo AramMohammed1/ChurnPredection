@@ -22,26 +22,20 @@ async def segment_customers_endpoint(
     Segment customers using the K-means model
     """
     try:
-        # Get access token from request headers
         access_token = request_obj.headers.get("Authorization", "").replace("Bearer ", "")
         user_id = current_user["id"]
         table_name = f"user_data_{user_id}"
 
-        # Fetch customer data from data service
         customers = await get_all_customers(table_name, access_token)
         
         if not customers:
             raise HTTPException(status_code=404, detail="No customer data found")
         
-        # Convert to DataFrame
         df = pd.DataFrame(customers)
         
-        # Perform segmentation
         segmentation_result = segmentation_service.segment_customers(df)
-        # Get behavior analysis
         behavior_analysis = segmentation_service.get_segment_behavior_analysis(df)
         
-        # Prepare response
         response_data = {
             "segments": segmentation_result["segments"],
             "behavior_analysis": behavior_analysis,
@@ -68,23 +62,18 @@ async def get_segments(
     Get customer segments for a specific table
     """
     try:
-        # Get access token from request headers
        
         access_token = request.headers.get("Authorization", "").replace("Bearer ", "")
         user_id = current_user["id"]
         table_name = f"user_data_{user_id}"
-        # Fetch customer data from data service
         customers = await get_all_customers(table_name, access_token)
         if not customers:
             raise HTTPException(status_code=404, detail="No customer data found")
         
-        # Convert to DataFrame
         df = pd.DataFrame(customers)
         
-        # Perform segmentation
         segmentation_result = segmentation_service.segment_customers(df)
         
-        # Get behavior analysis
         behavior_analysis = segmentation_service.get_segment_behavior_analysis(df)
 
         return {
@@ -107,9 +96,7 @@ async def get_customer_segment(
     Get segment information for a specific customer
     """
     try:
-        # Get access token from request headers
         access_token = request.headers.get("Authorization", "").replace("Bearer ", "")
-        # Fetch customer data from data service
         user_id = current_user["id"]
         table_name = f"user_data_{user_id}"
         customers = await get_all_customers(table_name, access_token)
@@ -117,18 +104,13 @@ async def get_customer_segment(
         if not customers:
             raise HTTPException(status_code=404, detail="No customer data found")
         
-        # Convert to DataFrame
         df = pd.DataFrame(customers)
-        # Filter for specific customer
         customer_data = df[df['Customer ID'] == customer_id]
         
         if customer_data.empty:
             raise HTTPException(status_code=404, detail="Customer not found")
-        
-        # Perform segmentation
         segmentation_result = segmentation_service.segment_customers(customer_data)
         
-        # Get customer's segment
         customer_segment = customer_data.iloc[0]
         
         return {
@@ -152,20 +134,15 @@ async def get_behavior_analysis(
     Get behavioral analysis for all segments
     """
     try:
-        # Get access token from request headers
         access_token = request.headers.get("Authorization", "").replace("Bearer ", "")
         user_id = current_user["id"]
         table_name = f"user_data_{user_id}"
-        # Fetch customer data from data service
         customers = await get_all_customers(table_name, access_token)
         
         if not customers:
             raise HTTPException(status_code=404, detail="No customer data found")
-        
-        # Convert to DataFrame
         df = pd.DataFrame(customers)
         
-        # Get behavior analysis
         behavior_analysis = segmentation_service.get_segment_behavior_analysis(df)
         
         return {
