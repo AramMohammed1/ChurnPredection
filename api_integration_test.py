@@ -11,14 +11,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Security
 security = HTTPBearer()
 
-# Sample data generator
 def generate_sample_customers(count: int = 50) -> List[dict]:
     """Generate sample customer data in the expected format (raw categorical data)"""
     
-    # Sample data for variety
     names = [
         "John Smith", "Emma Johnson", "Michael Brown", "Sarah Davis", "David Wilson",
         "Lisa Anderson", "James Taylor", "Jennifer Martinez", "Robert Garcia", "Amanda Rodriguez",
@@ -32,7 +29,6 @@ def generate_sample_customers(count: int = 50) -> List[dict]:
         "Samantha Ross", "Adam Henderson", "Megan Coleman", "Nathan Jenkins", "Lauren Perry"
     ]
     
-    # Raw categorical values (not one-hot encoded)
     payment_methods = ["Credit Card", "PayPal", "Cash"]
     product_categories = ["Electronics", "Clothing", "Books","Home"]
     genders = ["Male", "Female"]
@@ -40,19 +36,15 @@ def generate_sample_customers(count: int = 50) -> List[dict]:
     customers = []
     
     for i in range(count):
-        # Generate random purchase dates within the last year
         days_ago = random.randint(1, 365)
         purchase_date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
         
-        # Generate realistic data
         age = random.randint(18, 75)
         product_price = round(random.uniform(10.0, 500.0), 2)
         quantity = random.randint(1, 5)
         total_amount = round(product_price * quantity, 2)
-        returns = round(random.uniform(0, total_amount * 0.1), 2)  # 0-10% returns
+        returns = round(random.uniform(0, total_amount * 0.1), 2)
         
-        # Determine churn based on some business logic
-        # Higher churn probability for older customers, high returns, or low purchase amounts
         churn_probability = 0.0
         if age > 60:
             churn_probability += 0.3
@@ -72,9 +64,9 @@ def generate_sample_customers(count: int = 50) -> List[dict]:
             "Total Purchase Amount": total_amount,
             "Returns": returns,
             "Age": age,
-            "Gender": random.choice(genders),  # Raw categorical value
-            "Payment Method": random.choice(payment_methods),  # Raw categorical value
-            "Product Category": random.choice(product_categories),  # Raw categorical value
+            "Gender": random.choice(genders), 
+            "Payment Method": random.choice(payment_methods),
+            "Product Category": random.choice(product_categories), 
             "Churn": churn
         }
         
@@ -82,14 +74,11 @@ def generate_sample_customers(count: int = 50) -> List[dict]:
     
     return customers
 
-# Authentication check
 def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Verify the API key (for testing, accept any valid Bearer token)"""
     if not credentials or not credentials.credentials:
         raise HTTPException(status_code=401, detail="Invalid API key")
     
-    # For testing purposes, accept any non-empty token
-    # In production, you would validate against a real API key
     if len(credentials.credentials) < 5:
         raise HTTPException(status_code=401, detail="Invalid API key")
     
@@ -131,7 +120,6 @@ async def get_customers(
     - Categorical data is returned in raw format (e.g., "Male", "Credit Card")
     - The main application will handle one-hot encoding during processing
     """
-    # Handle None case for limit parameter
     if limit is None:
         limit = 50
     elif limit > 1000:
@@ -154,7 +142,6 @@ async def get_customers_with_metadata(
     Returns:
     - JSON object with 'data' field containing customer array
     """
-    # Handle None case for limit parameter
     if limit is None:
         limit = 50
     elif limit > 1000:

@@ -3,12 +3,10 @@ import jwt
 from datetime import datetime, timedelta
 from typing import Optional
 
-# Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 from .config import settings
 
-# JWT settings
 SECRET_KEY = settings.secret_key
 ALGORITHM = settings.algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes

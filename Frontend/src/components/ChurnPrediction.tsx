@@ -318,7 +318,6 @@ export const ChurnPrediction = ({ onSessionEnd }: ChurnPredictionProps) => {
   const churnBinaryData = getChurnBinaryDistribution();
   const pieColors = ["#ef4444", "#22c55e"];
 
-  // --- Customer Segmentation by Churn Risk ---
   const getChurnRiskSegmentation = () => {
     if (!churnData) return [];
     let high = 0, medium = 0, low = 0;

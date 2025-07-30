@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 from fastapi import HTTPException
-from ..utils.data_service import get_all_customers  # Use HTTP API
+from ..utils.data_service import get_all_customers  
 from . import churn_service
 from ..models.models import ChurnPredictionResponse
 from ..domain.tasks import update_task_progress
@@ -59,7 +59,6 @@ async def predict_churn(customer_id, table_name, access_token):
     customer_sequences, labels = await get_customer_sequence_scaled(customer_id, table_name, access_token)
     if churn_service.model is None:
         raise HTTPException(status_code=500, detail="Model not loaded")
-    # Prepare sequence data
     if len(customer_sequences[0]) != churn_service.seq_length * churn_service.num_features:
         raise HTTPException(
             status_code=400,
@@ -70,13 +69,11 @@ async def predict_churn(customer_id, table_name, access_token):
     sequence_tensor = torch.tensor(sequences, dtype=torch.float32).reshape(len(sequences), churn_service.seq_length, churn_service.num_features)
         
     result = []
-    # Make prediction
     with torch.no_grad():
         predictions = churn_service.model(sequence_tensor)
         for pred in predictions:
             churn_probability= pred.item()
 
-            # Determine churn prediction and confidence
             churn_prediction = churn_probability > 0.5
         
             if churn_probability > 0.8 or churn_probability < 0.2:

@@ -29,7 +29,6 @@ async def get_current_user(request: Request):
         except httpx.RequestError:
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Auth service unavailable")
 
-# Optionally, add a function to refresh tokens if needed
 async def refresh_access_token(refresh_token: str) -> dict:
     async with httpx.AsyncClient() as client:
         resp = await client.post(f"{AUTH_SERVICE_URL}/auth/refresh", json={"refresh_token": refresh_token})
