@@ -151,7 +151,8 @@ export const CLTVAnalysis = ({ onSessionEnd }: CLTVAnalysisProps) => {
         <CardHeader>
           <CardTitle>CLTV Analysis</CardTitle>
           <CardDescription>
-            Calculate Customer Lifetime Value for your data
+            Calculate Customer Lifetime Value for your data,
+            Please Calculate Churn first To get True Results
           </CardDescription>
         </CardHeader>
         <CardContent>

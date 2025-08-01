@@ -160,7 +160,10 @@ export const CustomerSegmentation = ({ onSessionEnd }: CustomerSegmentationProps
           <h2 className="text-2xl font-bold">Customer Segmentation</h2>
           <p className="text-muted-foreground">AI-powered customer segmentation analysis</p>
         </div>
-        <Button onClick={handleRefresh} disabled={loading}>
+        <Button 
+        className="flex items-center gap-2"
+        variant="outline"
+        onClick={handleRefresh} disabled={loading}>
           {loading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
@@ -171,7 +174,7 @@ export const CustomerSegmentation = ({ onSessionEnd }: CustomerSegmentationProps
       </div>
 
       {/* Segment Overview */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-1 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Customer Distribution</CardTitle>
@@ -202,27 +205,7 @@ export const CustomerSegmentation = ({ onSessionEnd }: CustomerSegmentationProps
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Behavioral Analysis</CardTitle>
-            <CardDescription>Purchase frequency and engagement by segment</CardDescription>
-          </CardHeader>
-          
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="90%">
-                <BarChart data={behaviorData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="segment"  label={{value: 'segment', angle: 0, position: 'insideBottom', offset: -2}}/>
-                  <YAxis  label={{ value: 'frequency/Engagment', angle: -90, position: 'Left',offset: 5}}/>
-                  <Tooltip />
-                  <Bar dataKey="purchases" fill="#3B82F6" name="Avg. Purchases/Year" />
-                  <Bar dataKey="engagement" fill="#10B981" name="Engagement Score" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+
       </div>
 
       {/* Segment Details */}

@@ -10,21 +10,21 @@ import logging
 model = None
 scaler = None
 segment_names = {
-    0: "Champions",
-    1: "Loyal Customers", 
-    2: "Potential Loyalists",
-    3: "At Risk",
-    4: "New Customers",
-    5: "Need Attention"
+    0: "Golden Prime Youth",
+    1: "Silver Modest Youth", 
+    2: "Golden-Silver Hybrid Youth",
+    3: "Balanced Midlife",
+    4: "Golden Peak Age",
+    5: "Silver Mature Age"
 }
 
 segment_descriptions = {
-    0: "High value, highly engaged customers with frequent purchases",
-    1: "Regular purchasers with good engagement",
-    2: "Recent customers with potential for growth",
-    3: "Declining engagement, at risk of churning",
-    4: "Recent first-time buyers",
-    5: "Customers with bad engagmement"
+    0: "young age with many requests and a big opportunity",
+    1: "young age with few requests and a small opportunity",
+    2: "young age with many requests and a big opportunity",
+    3: "moderate age with many requests and a big opportunity",
+    4: "great age with many requests and a big opportunity",
+    5: "great age with few requests and a moderate opportunity"
 }
 
 segment_colors = {

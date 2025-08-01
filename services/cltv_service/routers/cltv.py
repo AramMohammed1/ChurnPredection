@@ -132,8 +132,8 @@ async def calculate_cltv_for_table(
         if df.empty:
             raise HTTPException(status_code=404, detail="No data found in the specified table")
         
-        churn_rate = await get_churn_rate_from_service(table_name, auth_token)
-        
+        # churn_rate = await get_churn_rate_from_service(table_name, auth_token)
+        churn_rate = 0.5
         cltv_results = calculate_cltv(df, churn_rate)
         
         limit_value = limit if limit is not None else 100
@@ -201,8 +201,8 @@ async def get_customer_cltv(
         if customer_data.empty:
             raise HTTPException(status_code=404, detail=f"Customer {customer_id} not found")
         
-        churn_rate = await get_churn_rate_from_service(table_name, auth_token)
-        
+        # churn_rate = await get_churn_rate_from_service(table_name, auth_token)
+        churn_rate = 0.5
         cltv_results = calculate_cltv(customer_data.to_frame().T if len(customer_data) == 1 else customer_data, churn_rate)
         
         if cltv_results.empty:
@@ -246,8 +246,8 @@ async def get_cltv_segments(
         if df.empty:
             raise HTTPException(status_code=404, detail="No data found in the specified table")
         
-        churn_rate = await get_churn_rate_from_service(table_name, auth_token)
-        
+        # churn_rate = await get_churn_rate_from_service(table_name, auth_token)
+        churn_rate = 0.5
         cltv_results = calculate_cltv(df, churn_rate)
         
         def categorize_cltv(cltv_value):
