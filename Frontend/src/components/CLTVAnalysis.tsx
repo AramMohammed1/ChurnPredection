@@ -139,7 +139,7 @@ export const CLTVAnalysis = ({ onSessionEnd }: CLTVAnalysisProps) => {
     name: customer.customer_name || `Customer ${customer.customer_id}`,
     customerId: customer.customer_id,
     currentCLTV: formatCurrency(customer.cltv || 0),
-    timeToValue: `${Math.round(12 / (customer.purchase_frequency || 1))} months`,
+    timeToValue: `${Math.round(Math.round(1 / (customer.purchase_frequency || 1)) / 30 )} months`,
     totalSpent: formatCurrency(customer.total_price || 0),
     transactions: customer.total_transaction || 0
   })) || [];
@@ -224,7 +224,7 @@ export const CLTVAnalysis = ({ onSessionEnd }: CLTVAnalysisProps) => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-red-600">
-                  {formatPercentage(cltvData.summary.churn_rate || 0)}
+                  {formatPercentage(cltvData.summary.churn_rate || 1)}
                 </div>
                 <p className="text-xs text-slate-500 mt-1">Predicted churn rate</p>
               </CardContent>

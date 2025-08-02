@@ -65,7 +65,7 @@ def calculate_cltv(df: pd.DataFrame, churn_rate: float) -> pd.DataFrame:
         
         cltv_c["Average Order Value"] = cltv_c["Total Price"] / cltv_c["Total Transaction"].replace(0, 1)
         cltv_c["Purchase Frequency"] = cltv_c["Total Transaction"] / max(1, cltv_c.shape[0])
-        cltv_c['Profit Margin'] = cltv_c['Total Price'] * 0.01
+        cltv_c['Profit Margin'] = cltv_c['Total Price'] * 0.15
         
        
         safe_churn_rate = max(0.01, min(0.99, churn_rate))
@@ -73,7 +73,7 @@ def calculate_cltv(df: pd.DataFrame, churn_rate: float) -> pd.DataFrame:
         cltv_c['CLT'] = 1 / safe_churn_rate
 
         cltv_c['Customer Value'] = cltv_c['Average Order Value'] * cltv_c["Purchase Frequency"]
-        cltv_c["CLTV"] = (cltv_c["Customer Value"] / safe_churn_rate) * cltv_c["Profit Margin"]
+        cltv_c["CLTV"] = (cltv_c["Customer Value"] / (safe_churn_rate*100)) * cltv_c["Profit Margin"]
         
         cltv_c["CLTV"] = cltv_c["CLTV"].replace([float('inf'), float('-inf')], 0)
         cltv_c["CLTV"] = cltv_c["CLTV"].fillna(0)
@@ -133,7 +133,7 @@ async def calculate_cltv_for_table(
             raise HTTPException(status_code=404, detail="No data found in the specified table")
         
         # churn_rate = await get_churn_rate_from_service(table_name, auth_token)
-        churn_rate = 0.5
+        churn_rate = 0.01
         cltv_results = calculate_cltv(df, churn_rate)
         
         limit_value = limit if limit is not None else 100
@@ -202,7 +202,7 @@ async def get_customer_cltv(
             raise HTTPException(status_code=404, detail=f"Customer {customer_id} not found")
         
         # churn_rate = await get_churn_rate_from_service(table_name, auth_token)
-        churn_rate = 0.5
+        churn_rate = 0.01
         cltv_results = calculate_cltv(customer_data.to_frame().T if len(customer_data) == 1 else customer_data, churn_rate)
         
         if cltv_results.empty:
@@ -247,7 +247,7 @@ async def get_cltv_segments(
             raise HTTPException(status_code=404, detail="No data found in the specified table")
         
         # churn_rate = await get_churn_rate_from_service(table_name, auth_token)
-        churn_rate = 0.5
+        churn_rate = 0.01
         cltv_results = calculate_cltv(df, churn_rate)
         
         def categorize_cltv(cltv_value):

@@ -210,10 +210,10 @@ async def predict_churn_batch(table_name, access_token, task_id=None, total_cust
                     predictions = churn_service.model(sequence_tensor)
                     for pred in predictions:
                         churn_probability = pred.item()
-                        churn_prediction = churn_probability > 0.5
-                        if churn_probability > 0.8 or churn_probability < 0.2:
+                        churn_prediction = churn_probability >= 0.5
+                        if churn_probability >= 0.5:
                             confidence = "High"
-                        elif churn_probability > 0.6 or churn_probability < 0.4:
+                        elif churn_probability > 0.3 or churn_probability < 0.5:
                             confidence = "Medium"
                         else:
                             confidence = "Low"

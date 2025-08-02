@@ -92,7 +92,6 @@ export const ChurnPrediction = ({ onSessionEnd }: ChurnPredictionProps) => {
               
               // Fetch all customer details in one call
               const user = await authService.getCurrentUser();
-              console.log("occored one time")
               const allCustomers = await churnService.getAllCustomers(`user_data_${user.id}`);
               setCustomers(allCustomers);
 
@@ -117,7 +116,7 @@ export const ChurnPrediction = ({ onSessionEnd }: ChurnPredictionProps) => {
                 return;
               }
               else{
-                setError(progressData.error || 'Prediction failed 17');
+                setError(progressData.error || 'Prediction failed');
                 setLoading(false);
               }
             }
@@ -245,7 +244,7 @@ export const ChurnPrediction = ({ onSessionEnd }: ChurnPredictionProps) => {
       const customer = customers.find(c => Number(c['Customer ID']) === customerId);
       
       if (customer && data.prediction.length > 0) {
-        const prediction = data.prediction[0]; // Get the first prediction
+        const prediction = data.prediction[data.prediction.length-1];
         const churnProbability = Math.round(prediction.churn_probability * 100);
         
         churnCustomers.push({
@@ -279,7 +278,7 @@ export const ChurnPrediction = ({ onSessionEnd }: ChurnPredictionProps) => {
       atRiskRevenue: Math.round(atRiskRevenue / 1000), // In thousands
       retentionRate: customers.length > 0
         ? Math.round(
-            ((customers.length - allPredictions.filter(p => p.churn_probability > 0.5).length) / customers.length) * 1000
+            ((customers.length - allPredictions.filter(p => p.churn_probability >= 0.5).length) / customers.length) * 1000
           ) / 10 
         : 0
     };
@@ -307,7 +306,7 @@ export const ChurnPrediction = ({ onSessionEnd }: ChurnPredictionProps) => {
     let churn = 0, noChurn = 0;
     Object.values(churnData).forEach(data => {
       // Assume the first prediction is the relevant one
-      if (data.prediction[0]?.churn_prediction) churn++;
+      if (data.prediction[data.prediction.length-1]?.churn_prediction) churn++;
       else noChurn++;
     });
     return [
@@ -324,8 +323,8 @@ export const ChurnPrediction = ({ onSessionEnd }: ChurnPredictionProps) => {
     Object.values(churnData).forEach(data => {
       data.prediction.forEach(p => {
         const prob = p.churn_probability * 100;
-        if (prob > 50) high++;
-        else if (prob > 20) medium++;
+        if (prob >= 50) high++;
+        else if (prob >= 20) medium++;
         else low++;
       });
     });
