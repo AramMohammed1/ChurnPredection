@@ -189,14 +189,18 @@ const Index = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto p-6">
         {/* KPI Cards */}
-        <KPICards />
+        {/* <KPICards /> */}
 
         {/* Analytics Tabs */}
-        <Tabs defaultValue="overview" className="mt-8">
-          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:grid-cols-none lg:inline-flex">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
+        <Tabs defaultValue="import" className="mt-8">
+          <TabsList className="grid w-full grid-cols-5 ">
+            {/* <TabsTrigger value="overview" className="flex items-center gap-2">
               <Activity className="w-4 h-4" />
               <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger> */}
+             <TabsTrigger value="import" className="flex items-center gap-2">
+              <Database className="w-4 h-4" />
+              <span className="hidden sm:inline">Data</span>
             </TabsTrigger>
             <TabsTrigger value="churn" className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
@@ -209,10 +213,6 @@ const Index = () => {
             <TabsTrigger value="cltv" className="flex items-center gap-2">
               <DollarSign className="w-4 h-4" />
               <span className="hidden sm:inline">CLTV</span>
-            </TabsTrigger>
-            <TabsTrigger value="import" className="flex items-center gap-2">
-              <Database className="w-4 h-4" />
-              <span className="hidden sm:inline">Data</span>
             </TabsTrigger>
             <TabsTrigger value="insights" className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4" />

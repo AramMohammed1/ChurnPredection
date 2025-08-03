@@ -180,7 +180,7 @@ if __name__ == "__main__":
     print("   - GET /customers/large (500 records)")
     print("   - GET /customers/with_metadata (alternative format)")
     print("\n🌐 Server will be available at: http://localhost:8001")
-    print("📝 Use this URL in your main app: http://localhost:8001/customers")
+    print("📝 Use this URL in your main app: http://localhost:8002/customers")
     print("🔑 API Key: test-token-123 (or any valid Bearer token)")
     
     uvicorn.run(app, host="0.0.0.0", port=8001) 

@@ -415,9 +415,9 @@ export const DataImport = () => {
                       Your CSV should include these columns:
                     </p>
                     <div className="text-xs text-blue-700 space-y-1">
-                      <p><strong>Required:</strong> Customer ID, Customer Name, Purchase Date, Product Price, Quantity, Total Purchase Amount</p>
-                      <p><strong>Optional:</strong> Returns, Age, Gender, Payment Method, Product Category, Churn</p>
-                      <p><strong>Example:</strong> Customer ID, Customer Name, Purchase Date, Product Price, Quantity, Total Purchase Amount, Returns, Age, Gender, Payment Method, Product Category, Churn</p>
+                      <p><strong>Required:</strong> Customer ID, Customer Name, Purchase Date, Product Price, Quantity, Total Purchase Amount,Returns, Age, Gender, Payment Method, Product Category, Churn</p>
+                      {/* <p><strong>Optional:</strong> Returns, Age, Gender, Payment Method, Product Category, Churn</p> */}
+                      {/* <p><strong>Example:</strong> Customer ID, Customer Name, Purchase Date, Product Price, Quantity, Total Purchase Amount, Returns, Age, Gender, Payment Method, Product Category, Churn</p> */}
                     </div>
                   </CardContent>
                 </Card>
